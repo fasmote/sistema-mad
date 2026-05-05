@@ -1,0 +1,28 @@
+{
+  "id": "CASO_03",
+  "nombre": "Integración con API externa — Fintech",
+  "dominio_esperado": "fintech",
+  "input": {
+    "dominio": "fintech",
+    "objetivo_raw": "Necesito documentar la integración con la API de AFIP para validación de CUIT en tiempo real. Cuando el usuario ingresa un CUIT, el sistema consulta a AFIP y valida si está activo. Si AFIP no responde en 5 segundos, debe usar el último valor cacheado.",
+    "restricciones_raw": "La integración debe cumplir con las normas del BCRA para manejo de datos fiscales. Los CUIT consultados no pueden almacenarse más de 24 horas.",
+    "cantidad_aprox": "entre 5 y 10"
+  },
+  "criterios_validacion": {
+    "obligatorios": [
+      "agentes_activados contiene adversarial",
+      "alcance tiene al menos 1 elemento",
+      "restricciones tiene al menos 1 elemento"
+    ],
+    "esperados": [
+      "dominio es fintech",
+      "restricciones menciona BCRA o datos fiscales",
+      "riesgos_a_explorar menciona disponibilidad o timeout o AFIP",
+      "complejidad es media o alta"
+    ],
+    "errores_graves": [
+      "falta adversarial",
+      "no menciona integración o API en el alcance"
+    ]
+  }
+}

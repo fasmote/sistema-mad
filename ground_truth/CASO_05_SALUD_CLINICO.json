@@ -1,0 +1,33 @@
+{
+  "id": "CASO_05",
+  "nombre": "Clínico con offline — dominio Salud crítico",
+  "dominio_esperado": "salud",
+  "input": {
+    "dominio": "salud",
+    "objetivo_raw": "Necesito documentar el módulo de atención de guardia del hospital. El médico de guardia registra la consulta del paciente incluyendo motivo de consulta, diagnóstico, indicaciones y derivación si corresponde. El sistema debe funcionar aunque no haya internet, sincronizando cuando la conexión vuelve. En guardia hay muchos pacientes y el médico tiene poco tiempo.",
+    "restricciones_raw": "Ley 153 de Salud de CABA — confidencialidad de datos del paciente. El sistema debe funcionar offline obligatoriamente. La firma del médico es requisito legal en cada consulta.",
+    "cantidad_aprox": "entre 20 y 30"
+  },
+  "criterios_validacion": {
+    "obligatorios": [
+      "agentes_activados contiene adversarial",
+      "agentes_activados contiene stakesim",
+      "alcance tiene al menos 1 elemento",
+      "actores tiene al menos 1 elemento",
+      "restricciones tiene al menos 1 elemento"
+    ],
+    "esperados": [
+      "dominio es salud",
+      "complejidad es alta o critica",
+      "restricciones menciona Ley 153 o confidencialidad",
+      "riesgos_a_explorar menciona offline o sincronización",
+      "actores menciona médico de guardia o paciente"
+    ],
+    "errores_graves": [
+      "falta adversarial",
+      "falta stakesim en dominio salud",
+      "no menciona funcionamiento offline en alcance o riesgos",
+      "complejidad es baja o media para este caso"
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "sistema-mad",
+  "version": "0.1.0",
+  "description": "Motor de Debate Multi-Agente para documentación técnica",
+  "main": "director.js",
+  "scripts": {
+    "test": "node test_briefing.js",
+    "start": "node director.js"
+  },
+  "keywords": ["MAD", "multi-agent", "debate", "LLM", "documentacion"],
+  "author": "Claudio (DGSISAN)",
+  "license": "MIT",
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "uuid": "^10.0.0"
+  }
+}

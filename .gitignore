@@ -1,0 +1,26 @@
+# API keys y configuración personal — NUNCA subir
+.env
+
+# Dependencias de Node.js
+node_modules/
+
+# Logs técnicos del sistema (se generan automáticamente)
+logs/*.jsonl
+logs/*.log
+
+# Debates generados localmente (se generan automáticamente)
+debates/*/
+
+# Archivos Word pesados — descargar desde la conversación
+*.docx
+
+# Archivos temporales de Windows
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+
+# Mantener las carpetas vacías en git
+!logs/.gitkeep
+!debates/.gitkeep
+!docs/.gitkeep

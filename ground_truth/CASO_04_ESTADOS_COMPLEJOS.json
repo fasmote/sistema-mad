@@ -1,0 +1,28 @@
+{
+  "id": "CASO_04",
+  "nombre": "Estados complejos — máquina de estados",
+  "dominio_esperado": "generico",
+  "input": {
+    "dominio": "generico",
+    "objetivo_raw": "Necesito documentar el ciclo de vida de un expediente de habilitación de establecimiento geriátrico. El expediente puede estar en estos estados: borrador, presentado, en revisión, observado, aprobado, rechazado, vencido. Solo algunos estados pueden transicionar a otros. Por ejemplo, de observado se puede volver a presentado o pasar a rechazado, pero no a aprobado directamente.",
+    "restricciones_raw": "Las transiciones de estado deben estar auditadas. Solo el inspector habilitado puede aprobar o rechazar. El expediente vence automáticamente si no hay movimiento en 90 días.",
+    "cantidad_aprox": "entre 15 y 20"
+  },
+  "criterios_validacion": {
+    "obligatorios": [
+      "agentes_activados contiene adversarial",
+      "alcance tiene al menos 1 elemento",
+      "actores tiene al menos 1 elemento",
+      "riesgos_a_explorar tiene al menos 1 elemento"
+    ],
+    "esperados": [
+      "complejidad es alta o critica",
+      "actores menciona inspector",
+      "riesgos_a_explorar menciona transiciones o estados"
+    ],
+    "errores_graves": [
+      "falta adversarial",
+      "complejidad es baja para un caso con 15-20 RF y estados complejos"
+    ]
+  }
+}

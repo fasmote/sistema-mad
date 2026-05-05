@@ -1,0 +1,29 @@
+{
+  "id": "CASO_01",
+  "nombre": "ABM Simple sin restricciones",
+  "dominio_esperado": "generico",
+  "input": {
+    "dominio": "generico",
+    "objetivo_raw": "Necesito documentar el ABM de tipos de sangre para el sistema del hospital. El médico puede crear, editar y eliminar tipos de sangre. Es una pantalla simple de administración.",
+    "restricciones_raw": "",
+    "cantidad_aprox": "5"
+  },
+  "criterios_validacion": {
+    "obligatorios": [
+      "agentes_activados contiene adversarial",
+      "alcance tiene al menos 1 elemento",
+      "actores tiene al menos 1 elemento",
+      "objetivo no está vacío"
+    ],
+    "esperados": [
+      "dominio es generico",
+      "actores menciona médico o administrador",
+      "alcance menciona ABM o tipos de sangre"
+    ],
+    "errores_graves": [
+      "agentes_activados está vacío",
+      "falta adversarial",
+      "objetivo está vacío"
+    ]
+  }
+}

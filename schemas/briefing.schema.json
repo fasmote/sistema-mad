@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BriefingMAD",
+  "description": "Schema del Briefing Técnico del sistema MAD v0.3",
+  "type": "object",
+  "required": ["debate_id","timestamp","dominio","objetivo","alcance","actores","agentes_activados","complejidad","criterio_de_cierre","riesgos_a_explorar"],
+  "additionalProperties": false,
+  "properties": {
+    "_origin":            { "type": "string" },
+    "debate_id":          { "type": "string", "format": "uuid" },
+    "timestamp":          { "type": "string", "format": "date-time" },
+    "dominio":            { "type": "string", "enum": ["salud","govtech","fintech","generico"] },
+    "objetivo":           { "type": "string", "minLength": 10 },
+    "alcance":            { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "fuera_de_alcance":   { "type": "array", "items": { "type": "string" } },
+    "actores":            { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "restricciones":      { "type": "array", "items": { "type": "string" } },
+    "agentes_activados": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id","modelo","rol"],
+        "properties": {
+          "id":     { "type": "string" },
+          "modelo": { "type": "string" },
+          "rol":    { "type": "string" }
+        }
+      },
+      "contains": { "properties": { "id": { "const": "adversarial" } }, "required": ["id"] }
+    },
+    "complejidad":        { "type": "string", "enum": ["baja","media","alta","critica"] },
+    "criterio_de_cierre": {
+      "type": "object",
+      "required": ["dod_minimo","max_rondas","max_costo_usd"],
+      "properties": {
+        "dod_minimo":    { "type": "number", "minimum": 80,  "maximum": 95 },
+        "max_rondas":    { "type": "number", "enum": [2,4,5,6,8] },
+        "max_costo_usd": { "type": "number", "minimum": 0.1, "maximum": 5.0 }
+      }
+    },
+    "riesgos_a_explorar": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "memoria_relevante":  { "type": "array" }
+  }
+}

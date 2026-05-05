@@ -1,0 +1,29 @@
+{
+  "id": "CASO_02",
+  "nombre": "Permisos y roles — GovTech",
+  "dominio_esperado": "govtech",
+  "input": {
+    "dominio": "govtech",
+    "objetivo_raw": "Necesito documentar el módulo de perfiles y permisos del sistema de gestión de expedientes. Hay tres roles: administrador, operador y auditor. Cada uno tiene permisos distintos sobre los expedientes. El administrador puede asignar roles a otros usuarios.",
+    "restricciones_raw": "Los cambios de permisos deben quedar registrados en un log de auditoría. No se puede eliminar el rol de administrador si es el último administrador del sistema.",
+    "cantidad_aprox": "entre 8 y 12"
+  },
+  "criterios_validacion": {
+    "obligatorios": [
+      "agentes_activados contiene adversarial",
+      "alcance tiene al menos 1 elemento",
+      "actores tiene al menos 1 elemento",
+      "restricciones tiene al menos 1 elemento"
+    ],
+    "esperados": [
+      "dominio es govtech",
+      "actores menciona administrador, operador o auditor",
+      "restricciones menciona log o auditoría",
+      "riesgos_a_explorar menciona permisos o roles"
+    ],
+    "errores_graves": [
+      "falta adversarial",
+      "restricciones está vacío cuando el input tenía restricciones"
+    ]
+  }
+}

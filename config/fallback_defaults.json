@@ -1,0 +1,22 @@
+{
+  "_description": "Valores por defecto para el Plan C — se usa cuando el LLM falla 3 veces",
+  "complejidad": "media",
+  "agentes_activados": [
+    {
+      "id": "funcional",
+      "modelo": "anthropic/claude-3-5-sonnet",
+      "rol": "Analista Funcional Senior"
+    },
+    {
+      "id": "adversarial",
+      "modelo": "deepseek/deepseek-r1",
+      "rol": "Devil's Advocate"
+    }
+  ],
+  "criterio_de_cierre": {
+    "dod_minimo": 80,
+    "max_rondas": 4,
+    "max_costo_usd": 2.00
+  },
+  "nota": "StakeSim se agrega automáticamente en código si el dominio es 'salud' (D-EXP-1)"
+}

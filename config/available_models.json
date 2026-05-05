@@ -1,0 +1,64 @@
+{
+  "anthropic/claude-3-5-sonnet": {
+    "nombre": "Claude 3.5 Sonnet",
+    "proveedor": "Anthropic",
+    "timeout_segundos": 45,
+    "precio_input_per_1M": 3.00,
+    "precio_output_per_1M": 15.00,
+    "contexto_max_tokens": 200000,
+    "roles_recomendados": ["funcional", "stakesim", "secretario"],
+    "fallback_chain": ["openai/gpt-4o", "google/gemini-2.0-flash"]
+  },
+  "openai/gpt-4o": {
+    "nombre": "GPT-4o",
+    "proveedor": "OpenAI",
+    "timeout_segundos": 40,
+    "precio_input_per_1M": 2.50,
+    "precio_output_per_1M": 10.00,
+    "contexto_max_tokens": 128000,
+    "roles_recomendados": ["arquitecto", "qa"],
+    "fallback_chain": ["anthropic/claude-3-5-sonnet", "google/gemini-2.0-flash"]
+  },
+  "google/gemini-2.0-flash": {
+    "nombre": "Gemini 2.0 Flash",
+    "proveedor": "Google",
+    "timeout_segundos": 30,
+    "precio_input_per_1M": 0.10,
+    "precio_output_per_1M": 0.40,
+    "contexto_max_tokens": 1000000,
+    "roles_recomendados": ["qa", "arquitecto", "secretario"],
+    "fallback_chain": ["openai/gpt-4o-mini", "anthropic/claude-3-5-sonnet"]
+  },
+  "deepseek/deepseek-r1": {
+    "nombre": "DeepSeek R1",
+    "proveedor": "DeepSeek",
+    "timeout_segundos": 90,
+    "precio_input_per_1M": 0.55,
+    "precio_output_per_1M": 2.19,
+    "contexto_max_tokens": 65536,
+    "roles_recomendados": ["adversarial"],
+    "fallback_chain": ["anthropic/claude-3-5-sonnet", "openai/gpt-4o"],
+    "nota": "Modelo de razonamiento — timeout mayor por diseño"
+  },
+  "openai/gpt-4o-mini": {
+    "nombre": "GPT-4o Mini",
+    "proveedor": "OpenAI",
+    "timeout_segundos": 20,
+    "precio_input_per_1M": 0.15,
+    "precio_output_per_1M": 0.60,
+    "contexto_max_tokens": 128000,
+    "roles_recomendados": ["señal_intencion"],
+    "fallback_chain": ["google/gemini-2.0-flash"],
+    "nota": "Modelo barato para señales de intención — Módulo 2"
+  },
+  "qwen/qwen-max": {
+    "nombre": "Qwen Max",
+    "proveedor": "Alibaba",
+    "timeout_segundos": 40,
+    "precio_input_per_1M": 1.60,
+    "precio_output_per_1M": 6.40,
+    "contexto_max_tokens": 32768,
+    "roles_recomendados": ["developer", "funcional"],
+    "fallback_chain": ["openai/gpt-4o", "anthropic/claude-3-5-sonnet"]
+  }
+}
