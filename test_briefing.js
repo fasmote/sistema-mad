@@ -11,7 +11,7 @@ import addFormats from 'ajv-formats';
 // ── Configuración ──────────────────────────────────────────────────────────────
 
 const API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL   = process.env.DEFAULT_ORCHESTRATOR_MODEL || 'anthropic/claude-3-5-sonnet';
+const MODEL   = process.env.DEFAULT_ORCHESTRATOR_MODEL || 'anthropic/claude-sonnet-4.5';
 const BASE_URL = 'https://openrouter.ai/api/v1';
 
 // ── Validación de archivos al inicio (D-EXP-8) ───────────────────────────────
