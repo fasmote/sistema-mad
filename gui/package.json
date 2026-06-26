@@ -1,0 +1,14 @@
+{
+  "name": "mad-tools-gui",
+  "version": "1.0.0",
+  "description": "Interfaz gráfica para herramientas MAD",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^32.0.0",
+    "pdfkit": "^0.15.1",
+    "exceljs": "^4.4.0"
+  }
+}

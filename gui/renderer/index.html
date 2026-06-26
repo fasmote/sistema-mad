@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>MAD Tools</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+
+    <header class="header">
+      <div class="header-brand">
+        <span class="header-logo">◈</span>
+        <div>
+          <div class="header-title">MAD Tools</div>
+          <div class="header-sub">Herramientas de análisis documental</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="main">
+
+      <!-- Panel izquierdo: tarjetas de herramientas -->
+      <section class="tools-panel" id="tools-panel">
+        <div class="loading">Cargando herramientas…</div>
+      </section>
+
+      <!-- Panel derecho: resultados -->
+      <section class="results-panel">
+        <div class="results-header">
+          <div class="results-meta">
+            <span class="results-title" id="results-title">Resultados</span>
+            <span class="results-badge" id="results-badge"></span>
+          </div>
+          <button class="btn btn-save" id="btn-save" disabled>↓ Guardar como…</button>
+        </div>
+        <pre class="results-output" id="results-output"><span class="placeholder-text">Ejecutá una herramienta para ver el reporte aquí.</span></pre>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

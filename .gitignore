@@ -20,6 +20,13 @@ desktop.ini
 *.tmp
 *.bak
 
+# Archivos generados por las herramientas MAD (artefactos, no fuente)
+mad-index.json
+*.snapshot.json
+
+# Configuración local del IDE (personal, nunca al repo)
+.claude/settings.local.json
+
 # Mantener las carpetas vacías en git
 !logs/.gitkeep
 !debates/.gitkeep

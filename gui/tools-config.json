@@ -1,0 +1,97 @@
+{
+  "tools": [
+    {
+      "id": "mad-linter",
+      "name": "MAD Linter",
+      "description": "Detecta referencias rotas, IDs duplicados y títulos fabricados en documentos .md.",
+      "command": "tools/mad-linter.cjs",
+      "inputs": [
+        {
+          "id": "carpeta",
+          "label": "Carpeta de documentos",
+          "type": "folder",
+          "required": true
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "mad-snapshot",
+      "name": "MAD Snapshot",
+      "description": "Censo de artefactos con sello temporal. Detecta IDs que aparecieron o desaparecieron.",
+      "command": "tools/mad-snapshot.cjs",
+      "inputs": [
+        {
+          "id": "carpeta",
+          "label": "Carpeta de documentos",
+          "type": "folder",
+          "required": true
+        }
+      ],
+      "flags": [
+        {
+          "id": "salida",
+          "flag": "--salida",
+          "label": "Archivo de salida .json",
+          "type": "text",
+          "required": false,
+          "placeholder": "ej: snapshot.json"
+        }
+      ]
+    },
+    {
+      "id": "mad-diff",
+      "name": "MAD Diff",
+      "description": "Compara dos versiones del corpus: qué cambió de contenido, qué es nuevo, qué se eliminó.",
+      "command": "tools/mad-diff.cjs",
+      "inputs": [
+        {
+          "id": "carpeta_vieja",
+          "label": "Versión vieja",
+          "type": "folder",
+          "required": true
+        },
+        {
+          "id": "carpeta_nueva",
+          "label": "Versión nueva",
+          "type": "folder",
+          "required": true
+        }
+      ],
+      "flags": [
+        {
+          "id": "tipo",
+          "flag": "--tipo",
+          "label": "Filtrar por tipo de artefacto",
+          "type": "text",
+          "required": false,
+          "placeholder": "ej: RF-CORE"
+        }
+      ]
+    },
+    {
+      "id": "mad-index",
+      "name": "MAD Index",
+      "description": "Genera un índice persistente de todos los artefactos: dónde se define cada uno, quién lo cita.",
+      "command": "tools/mad-index.cjs",
+      "inputs": [
+        {
+          "id": "carpeta",
+          "label": "Carpeta de documentos",
+          "type": "folder",
+          "required": true
+        }
+      ],
+      "flags": [
+        {
+          "id": "salida",
+          "flag": "--salida",
+          "label": "Archivo de salida .json",
+          "type": "text",
+          "required": false,
+          "placeholder": "ej: mad-index.json"
+        }
+      ]
+    }
+  ]
+}
