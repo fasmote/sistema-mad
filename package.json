@@ -6,7 +6,11 @@
   "main": "director.js",
   "scripts": {
     "test": "SET NODE_TLS_REJECT_UNAUTHORIZED=0 && node test_briefing.js",
-    "start": "SET NODE_TLS_REJECT_UNAUTHORIZED=0 && node director.js"
+    "start": "SET NODE_TLS_REJECT_UNAUTHORIZED=0 && node director.js",
+    "lint:docs": "node tools/mad-linter.cjs ./docs",
+    "test:linter": "node tools/test_linter.cjs",
+    "index:docs": "node tools/mad-index.cjs ./docs --salida docs/mad-index.json",
+    "index:compare": "node tools/mad-index.cjs ./docs --salida docs/mad-index.json --comparar"
   },
   "keywords": ["MAD", "multi-agent", "debate", "LLM", "documentacion"],
   "author": "Claudio (DGSISAN)",
