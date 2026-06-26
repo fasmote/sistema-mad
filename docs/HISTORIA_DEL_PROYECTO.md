@@ -1,8 +1,9 @@
 # Historia del Proyecto MAD
+
 ## Motor de Debate Multi-Agente para Documentación Técnica
 
-*Por Claudio — Analista Funcional Jr., DGSISAN, Buenos Aires*
-*Con Claude 3.7 como Orquestador — Mayo 2025*
+*Por Claudio — Analista Funcional Jr., Buenos Aires*
+*Con Claude 3.7 como Orquestador — Enero 2025*
 
 ---
 
@@ -12,7 +13,7 @@
 
 ## 1. El origen
 
-El 2 de mayo de 2025, Claudio escribió un mensaje que parecía una pregunta técnica simple:
+El 2 de enero de 2026, Claudio escribió un mensaje que parecía una pregunta técnica simple:
 
 > *"¿Cómo puedo hacer un programa que pueda hacer que varias inteligencias artificiales debatan entre ellas? Porque cuando estaba haciendo el documento de requerimiento funcional para la Habilitación de establecimientos de salud, copiaba lo que Claude me decía y se lo ponía a ChatGPT, eso aportaba otra mirada, luego te lo pasaba a Gemini... daba trabajo eso."*
 
@@ -28,22 +29,22 @@ Esto tenía nombre en la literatura: **Multi-Agent Debate (MAD)**. Du et al. (20
 
 ## 2. Los participantes
 
-**Claudio** — Analista Funcional Jr. en DGSISAN, Buenos Aires. Árbitro humano del sistema. Tiene la última palabra en todas las decisiones.
+**Claudio** — Analista Funcional Jr.  Buenos Aires. Árbitro humano del sistema. Tiene la última palabra en todas las decisiones.
 
 **Claude 3.7** — Orquestador del proceso. Sintetiza las respuestas, detecta convergencias falsas, produce los consolidados de cada ronda.
 
 **Las 8 IAs debatientes:**
 
-| IA | Especialización empírica observada |
-|---|---|
-| ChatGPT 4o | QA y casos borde |
-| Gemini 2.0 | Arquitectura técnica + pedagogía |
-| DeepSeek R1 | Adversarial sistémico — bugs de implementación |
-| Qwen Max | Perspectiva del developer — pragmatismo extremo |
-| Kimi K2 | Adversarial de consistencia arquitectónica |
-| MIMO | Síntesis y meta-análisis del proceso |
-| MiniMax | Producción masiva de artefactos de proceso |
-| Claude 3.5 | Análisis equilibrado |
+| IA          | Especialización empírica observada              |
+| ----------- | ----------------------------------------------- |
+| ChatGPT 4o  | QA y casos borde                                |
+| Gemini 2.0  | Arquitectura técnica + pedagogía                |
+| DeepSeek R1 | Adversarial sistémico — bugs de implementación  |
+| Qwen Max    | Perspectiva del developer — pragmatismo extremo |
+| Kimi K2     | Adversarial de consistencia arquitectónica      |
+| MIMO        | Síntesis y meta-análisis del proceso            |
+| MiniMax     | Producción masiva de artefactos de proceso      |
+| Claude 3.5  | Análisis equilibrado                            |
 
 Estas especializaciones no fueron asignadas — emergieron empíricamente a lo largo del proceso.
 
@@ -140,31 +141,37 @@ Cinco artefactos listos para usar. Ese es el **bootstrapping del sistema MAD**: 
 ## 6. Hallazgos empíricos
 
 ### H1 — Los roles son reales, no decorativos
+
 El mismo input, el mismo modelo, roles distintos → hallazgos distintos. El diseño de roles en sistemas multi-agente tiene valor real.
 
 ### H2 — El adversarial es el rol más crítico
+
 Sin adversarial, los debates convergen prematuramente. Confirmado empíricamente en la Ronda 7 cuando el adversarial quedó vacante: esa ronda fue la más convergente y menos crítica.
 
 ### H3 — La curva de rendimiento decreciente es señal de salud
-| Ronda | Hallazgos nuevos |
-|---|---|
-| 1 | 11 |
-| 2 | 7 |
-| 3 | 1 |
-| 4 | 5 (nuevo scope) |
-| 5 | 9 (artefactos MiniMax) |
-| 6 | 2 |
-| 7 | 7 (experimento) |
+
+| Ronda | Hallazgos nuevos       |
+| ----- | ---------------------- |
+| 1     | 11                     |
+| 2     | 7                      |
+| 3     | 1                      |
+| 4     | 5 (nuevo scope)        |
+| 5     | 9 (artefactos MiniMax) |
+| 6     | 2                      |
+| 7     | 7 (experimento)        |
 
 El criterio de cierre correcto no es "N rondas" sino "≤1 hallazgo nuevo en la última ronda".
 
 ### H4 — Los errores más peligrosos son los silenciosos
+
 El "no" interpretado como "sin restricciones", el texto incompleto aceptado sin aviso, el JSON válido pero semánticamente vacío — ninguno hace crashear el sistema. Todos producen output incorrecto con aspecto de output válido.
 
 ### H5 — El contexto acumulado vale más que los archivos
+
 DeepSeek y Qwen no recibieron los artefactos de MiniMax por limitación de la plataforma. Aun así, encontraron hallazgos de la misma calidad. El conocimiento acumulado en rondas previas compensó la falta de archivos físicos.
 
 ### H6 — Los outputs inesperados son los más valiosos
+
 El glosario de ChatGPT, los 11 artefactos de MiniMax, el código de Qwen — ninguno fue solicitado. Los tres emergieron porque el agente interpretó el contexto y actuó.
 
 ---
@@ -186,9 +193,11 @@ El glosario de ChatGPT, los 11 artefactos de MiniMax, el código de Qwen — nin
 El RF v0.3 tiene **51 decisiones** de 7 rondas de debate + 1 experimento. Cada una con origen trazable: una ronda, un agente, un argumento.
 
 **Artefactos de software:**
+
 - `test_briefing.js`, system prompt, schemas, catálogo de modelos, defaults del Plan C
 
 **Artefactos de proceso:**
+
 - Manifiesto, Protocolo, Checklist, Glosario, Mapa de Artefactos, Threshold, Registro de Fallos, 6 prompts de agentes, 5 casos de ground truth
 
 ---
@@ -196,6 +205,7 @@ El RF v0.3 tiene **51 decisiones** de 7 rondas de debate + 1 experimento. Cada u
 ## 9. Trabajo futuro
 
 **El paper académico:**
+
 - Pregunta: ¿El diseño de roles en sistemas MAD afecta la calidad del output de forma medible?
 - Comparar RF v0.1 (sin debate) vs RF v0.3 (con debate) en métricas objetivas
 - Contribución: aplicación de MAD a documentación técnica en sector público de salud
@@ -222,7 +232,7 @@ Eso no estaba planeado. Emergió. Y eso es, quizás, la evidencia más fuerte de
 
 ---
 
-*Claudio — DGSISAN — Buenos Aires — Mayo 2025*
+*Claudio — Buenos Aires — Enero 2026*
 *Con Claude 3.7, ChatGPT, Gemini, DeepSeek, Qwen, Kimi, MIMO y MiniMax*
 
 ---

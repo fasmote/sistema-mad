@@ -10,7 +10,7 @@ MAD es un sistema que hace debatir a múltiples inteligencias artificiales para 
 
 En lugar de pedirle a una sola IA que genere un documento, MAD le pasa el problema a varias IAs especializadas con roles distintos y sintetiza lo mejor de cada aporte. El resultado es más completo, más robusto, y tiene menor probabilidad de contener errores silenciosos.
 
-**¿Dónde nació?** En DGSISAN (Dirección General de Sistemas Sanitarios, Buenos Aires), como respuesta a la necesidad de producir requerimientos robustos para sistemas hospitalarios complejos. Su primer caso de uso real es el proyecto HIS/SOS (un sistema operativo sanitario modular).
+**¿Dónde nació?** Como respuesta a la necesidad de producir requerimientos robustos para sistemas hospitalarios complejos. Su primer caso de uso real es el proyecto HIS/SOS (un sistema operativo sanitario modular).
 
 La historia completa de cómo se construyó está en [`docs/HISTORIA_DEL_PROYECTO.md`](docs/HISTORIA_DEL_PROYECTO.md).
 
@@ -40,19 +40,19 @@ La mitad determinista es la que más valor da hoy: corre sola, no cuesta nada, y
 
 ### Mitad determinista — verificación documental
 
-| Herramienta | Qué hace | Comando |
-|---|---|---|
-| **mad-linter** | Detecta inconsistencias: referencias rotas, IDs duplicados, eventos fuera de catálogo, y **títulos fabricados por alucinación** (chequeo [H]) | `npm run lint:docs` |
-| **mad-snapshot** | Censo de artefactos (RF, DA, PH, ADR, FUT, FOA) con sello temporal ART automático. Detecta qué IDs aparecen o **desaparecen** entre corridas | `node tools/mad-snapshot.cjs <carpeta>` |
-| **mad-diff** | Compara dos versiones del corpus y reporta qué artefactos **cambiaron de contenido**, cuáles son nuevos y cuáles se eliminaron | `node tools/mad-diff.cjs <vieja> <nueva>` |
-| **mad-index** | Genera un índice persistente de todos los artefactos y sus relaciones | `npm run index:docs` |
+| Herramienta      | Qué hace                                                                                                                                      | Comando                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **mad-linter**   | Detecta inconsistencias: referencias rotas, IDs duplicados, eventos fuera de catálogo, y **títulos fabricados por alucinación** (chequeo [H]) | `npm run lint:docs`                       |
+| **mad-snapshot** | Censo de artefactos (RF, DA, PH, ADR, FUT, FOA) con sello temporal ART automático. Detecta qué IDs aparecen o **desaparecen** entre corridas  | `node tools/mad-snapshot.cjs <carpeta>`   |
+| **mad-diff**     | Compara dos versiones del corpus y reporta qué artefactos **cambiaron de contenido**, cuáles son nuevos y cuáles se eliminaron                | `node tools/mad-diff.cjs <vieja> <nueva>` |
+| **mad-index**    | Genera un índice persistente de todos los artefactos y sus relaciones                                                                         | `npm run index:docs`                      |
 
 ### Mitad deliberativa — motor de debate
 
-| Herramienta | Qué hace | Comando |
-|---|---|---|
-| **test_briefing** | Valida que el generador de briefings funcione (5 casos de prueba) | `npm test` |
-| **director** | La CLI que te entrevista y genera un briefing real (Módulo 1) | `npm start` |
+| Herramienta       | Qué hace                                                          | Comando     |
+| ----------------- | ----------------------------------------------------------------- | ----------- |
+| **test_briefing** | Valida que el generador de briefings funcione (5 casos de prueba) | `npm test`  |
+| **director**      | La CLI que te entrevista y genera un briefing real (Módulo 1)     | `npm start` |
 
 ---
 
@@ -120,15 +120,15 @@ Si algo desapareció sin querer al reescribir, las herramientas te avisan al ins
 
 ## Los chequeos del linter
 
-| Chequeo | Detecta |
-|---|---|
-| [A] | Referencias a RF que se citan pero nunca se definen |
-| [B] | IDs definidos dos veces |
-| [C] | Títulos numerados repetidos |
-| [D] | Versión del archivo distinta de la metadata |
-| [E] | Conjunto de documentos en versiones mezcladas |
-| [F] | Eventos usados que no están en el catálogo canónico |
-| [G] | Eventos con nombres sospechosamente parecidos |
+| Chequeo | Detecta                                                                    |
+| ------- | -------------------------------------------------------------------------- |
+| [A]     | Referencias a RF que se citan pero nunca se definen                        |
+| [B]     | IDs definidos dos veces                                                    |
+| [C]     | Títulos numerados repetidos                                                |
+| [D]     | Versión del archivo distinta de la metadata                                |
+| [E]     | Conjunto de documentos en versiones mezcladas                              |
+| [F]     | Eventos usados que no están en el catálogo canónico                        |
+| [G]     | Eventos con nombres sospechosamente parecidos                              |
 | **[H]** | **Títulos divergentes para el mismo ID — posible alucinación/fabricación** |
 
 El chequeo [H] nació de un incidente real: una IA produjo una tabla "lista para pegar" con títulos de decisiones que no existían en la fuente — los inventó. El linter ahora detecta eso automáticamente. Ver [`docs/MAD_Requisitos_Anti_Alucinacion.md`](docs/MAD_Requisitos_Anti_Alucinacion.md).
@@ -193,4 +193,4 @@ MIT
 
 ---
 
-*Desarrollado por Claudio (DGSISAN, Buenos Aires) con Claude como Orquestador.*
+*Desarrollado por Claudio (Buenos Aires) con Claude como Orquestador.*

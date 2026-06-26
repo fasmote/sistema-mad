@@ -12,7 +12,7 @@ En lugar de pedirle a una sola IA que genere un documento, MAD le pasa el proble
 
 **¿Quién lo usa?** Analistas funcionales, desarrolladores, y equipos técnicos que necesitan documentación de calidad sin depender de una sola perspectiva.
 
-**¿Dónde nació?** En DGSISAN (Dirección General de Sistemas Sanitarios, Buenos Aires), como respuesta a la necesidad de producir requerimientos robustos para sistemas hospitalarios complejos.
+**¿Dónde nació?** Como respuesta a la necesidad de producir requerimientos robustos para sistemas hospitalarios complejos.
 
 La historia completa de cómo se construyó está en [`docs/HISTORIA_DEL_PROYECTO.md`](docs/HISTORIA_DEL_PROYECTO.md).
 
@@ -71,12 +71,12 @@ La historia completa de cómo se construyó está en [`docs/HISTORIA_DEL_PROYECT
 
 ## Estado actual
 
-| Módulo | Estado | Descripción |
-|---|---|---|
+| Módulo   | Estado               | Descripción                                  |
+| -------- | -------------------- | -------------------------------------------- |
 | Módulo 1 | 🟡 En implementación | RF v0.3 cerrado — 51 decisiones incorporadas |
-| Módulo 2 | 📋 Especificado | Arquitectura v7 con 77 decisiones |
-| Módulo 3 | 📋 Especificado | Consolidación supervisada |
-| Módulo 4 | 🔮 POST-MVP | Memoria persistente con pgvector |
+| Módulo 2 | 📋 Especificado      | Arquitectura v7 con 77 decisiones            |
+| Módulo 3 | 📋 Especificado      | Consolidación supervisada                    |
+| Módulo 4 | 🔮 POST-MVP          | Memoria persistente con pgvector             |
 
 ---
 
@@ -84,12 +84,12 @@ La historia completa de cómo se construyó está en [`docs/HISTORIA_DEL_PROYECT
 
 Antes de instalar el proyecto, necesitás tener:
 
-| Requisito | Para qué sirve | Cómo obtenerlo |
-|---|---|---|
-| **Node.js ≥ 18** | Ejecuta el código JavaScript del sistema | [nodejs.org](https://nodejs.org) → botón LTS |
-| **Cuenta en OpenRouter** | Accede a las IAs (Claude, GPT-4, Gemini, etc.) | [openrouter.ai](https://openrouter.ai) → Sign Up |
-| **API Key de OpenRouter** | Autentica las llamadas a las IAs | openrouter.ai → perfil → API Keys |
-| **Créditos en OpenRouter** | Paga el uso de las IAs | openrouter.ai → Credits (con $5 USD alcanza para cientos de pruebas) |
+| Requisito                  | Para qué sirve                                 | Cómo obtenerlo                                                       |
+| -------------------------- | ---------------------------------------------- | -------------------------------------------------------------------- |
+| **Node.js ≥ 18**           | Ejecuta el código JavaScript del sistema       | [nodejs.org](https://nodejs.org) → botón LTS                         |
+| **Cuenta en OpenRouter**   | Accede a las IAs (Claude, GPT-4, Gemini, etc.) | [openrouter.ai](https://openrouter.ai) → Sign Up                     |
+| **API Key de OpenRouter**  | Autentica las llamadas a las IAs               | openrouter.ai → perfil → API Keys                                    |
+| **Créditos en OpenRouter** | Paga el uso de las IAs                         | openrouter.ai → Credits (con $5 USD alcanza para cientos de pruebas) |
 
 ---
 
@@ -175,11 +175,11 @@ El script prueba que todo funciona correctamente corriendo 5 casos de ejemplo y 
 
 ### ¿Qué significa cada resultado?
 
-| Resultado | Significado |
-|---|---|
-| ✅ PASS | La IA generó un Briefing válido y completo |
+| Resultado    | Significado                                                 |
+| ------------ | ----------------------------------------------------------- |
+| ✅ PASS       | La IA generó un Briefing válido y completo                  |
 | ⚠️ DEGRADADO | La IA falló, el sistema usó el fallback automático (Plan C) |
-| ❌ FAIL | Ni la IA ni el fallback funcionaron — revisar logs |
+| ❌ FAIL       | Ni la IA ni el fallback funcionaron — revisar logs          |
 
 **DoD Cumplido** significa que el sistema está funcionando correctamente: ≥ 4 de 5 casos con PASS o DEGRADADO, y no más de 1 DEGRADADO.
 
@@ -187,14 +187,14 @@ El script prueba que todo funciona correctamente corriendo 5 casos de ejemplo y 
 
 ## Solución de problemas
 
-| Error que aparece | Causa | Solución |
-|---|---|---|
-| `OPENROUTER_API_KEY no configurada` | El .env no tiene la key o no existe | Verificar que el archivo `.env` existe y tiene la key |
-| `HTTP 401 Unauthorized` | La API key es incorrecta | Verificar la key en openrouter.ai → API Keys |
-| `HTTP 402 Payment Required` | Sin créditos en OpenRouter | Cargar créditos en openrouter.ai → Credits |
-| `Cannot find module 'ajv'` | Las dependencias no están instaladas | Correr: `npm install` |
-| `Archivo no encontrado: prompts/...` | Faltan archivos de configuración | Verificar que clonaste el repositorio completo |
-| `DoD Cumplido: NO` | Algún caso falló | Revisar el detalle en pantalla y el archivo `logs/fallos_modelos.jsonl` |
+| Error que aparece                    | Causa                                | Solución                                                                |
+| ------------------------------------ | ------------------------------------ | ----------------------------------------------------------------------- |
+| `OPENROUTER_API_KEY no configurada`  | El .env no tiene la key o no existe  | Verificar que el archivo `.env` existe y tiene la key                   |
+| `HTTP 401 Unauthorized`              | La API key es incorrecta             | Verificar la key en openrouter.ai → API Keys                            |
+| `HTTP 402 Payment Required`          | Sin créditos en OpenRouter           | Cargar créditos en openrouter.ai → Credits                              |
+| `Cannot find module 'ajv'`           | Las dependencias no están instaladas | Correr: `npm install`                                                   |
+| `Archivo no encontrado: prompts/...` | Faltan archivos de configuración     | Verificar que clonaste el repositorio completo                          |
+| `DoD Cumplido: NO`                   | Algún caso falló                     | Revisar el detalle en pantalla y el archivo `logs/fallos_modelos.jsonl` |
 
 ---
 
@@ -299,26 +299,26 @@ sistema-mad/
 
 ## Roles de los agentes de debate
 
-| Rol | Función | Modelo recomendado |
-|---|---|---|
-| **Adversarial** | Ataca argumentos y busca contradicciones. Es el rol más crítico — sin él el debate converge falsamente | DeepSeek R1 / Kimi K2 |
-| **QA / Casos Borde** | Imagina lo que puede fallar en producción | ChatGPT 4o |
-| **Arquitecto** | Evalúa si las decisiones son técnicamente implementables | Gemini 2.0 |
-| **Developer Usuario** | Simula al desarrollador que tiene que implementar el RF | Qwen Max |
-| **StakeSim** | Simula usuarios reales bajo presión (el médico con 90 segundos por paciente, el enfermero a las 3am). Obligatorio en debates de dominio Salud | Claude 3.5 Sonnet |
-| **Secretario Técnico** | Actualiza el Documento Vivo con las decisiones aprobadas | Gemini 1.5 Pro |
-| **Orquestador** | Gestiona el debate, detecta consenso falso, sintetiza | Claude 3.7 |
+| Rol                    | Función                                                                                                                                       | Modelo recomendado    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| **Adversarial**        | Ataca argumentos y busca contradicciones. Es el rol más crítico — sin él el debate converge falsamente                                        | DeepSeek R1 / Kimi K2 |
+| **QA / Casos Borde**   | Imagina lo que puede fallar en producción                                                                                                     | ChatGPT 4o            |
+| **Arquitecto**         | Evalúa si las decisiones son técnicamente implementables                                                                                      | Gemini 2.0            |
+| **Developer Usuario**  | Simula al desarrollador que tiene que implementar el RF                                                                                       | Qwen Max              |
+| **StakeSim**           | Simula usuarios reales bajo presión (el médico con 90 segundos por paciente, el enfermero a las 3am). Obligatorio en debates de dominio Salud | Claude 3.5 Sonnet     |
+| **Secretario Técnico** | Actualiza el Documento Vivo con las decisiones aprobadas                                                                                      | Gemini 1.5 Pro        |
+| **Orquestador**        | Gestiona el debate, detecta consenso falso, sintetiza                                                                                         | Claude 3.7            |
 
 ---
 
 ## Dominios soportados
 
-| Dominio | Agentes adicionales | Ejemplos de uso |
-|---|---|---|
-| **Salud** | StakeSim (obligatorio siempre) | Historia clínica, turnos, habilitaciones de establecimientos |
-| **GovTech** | — | Trámites digitales, gestión pública, TAD, SADE |
-| **Fintech** | — | Integraciones con BCRA, AFIP, RENAPER |
-| **Genérico** | — | Cualquier sistema de software |
+| Dominio      | Agentes adicionales            | Ejemplos de uso                                              |
+| ------------ | ------------------------------ | ------------------------------------------------------------ |
+| **Salud**    | StakeSim (obligatorio siempre) | Historia clínica, turnos, habilitaciones de establecimientos |
+| **GovTech**  | —                              | Trámites digitales, gestión pública, TAD, SADE               |
+| **Fintech**  | —                              | Integraciones con BCRA, AFIP, RENAPER                        |
+| **Genérico** | —                              | Cualquier sistema de software                                |
 
 ---
 
@@ -349,4 +349,4 @@ MIT
 
 ---
 
-*Desarrollado por Claudio (DGSISAN, Buenos Aires) con Claude 3.7 como Orquestador — Mayo 2025*
+*Desarrollado por Claudio (Buenos Aires) con Claude 3.7 como Orquestador — Enero 2026*
