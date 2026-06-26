@@ -10,7 +10,8 @@
     "lint:docs": "node tools/mad-linter.cjs ./docs",
     "test:linter": "node tools/test_linter.cjs",
     "index:docs": "node tools/mad-index.cjs ./docs --salida docs/mad-index.json",
-    "index:compare": "node tools/mad-index.cjs ./docs --salida docs/mad-index.json --comparar"
+    "index:compare": "node tools/mad-index.cjs ./docs --salida docs/mad-index.json --comparar",
+	"snapshot": "node tools/mad-snapshot.cjs ./docs --salida docs/.snapshot.json"
   },
   "keywords": ["MAD", "multi-agent", "debate", "LLM", "documentacion"],
   "author": "Claudio (DGSISAN)",
