@@ -3,7 +3,7 @@
 ## Motor de Debate Multi-Agente para Documentación Técnica
 
 *Por Claudio — Analista Funcional Jr., Buenos Aires*
-*Con Claude 3.7 como Orquestador — Enero 2025*
+*Con Claude 3.7 como Orquestador — Enero 2026*
 
 ---
 
