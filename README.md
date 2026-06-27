@@ -80,6 +80,31 @@ La historia completa de cómo se construyó está en [`docs/HISTORIA_DEL_PROYECT
 
 ---
 
+## Herramientas de análisis documental — Interfaz gráfica
+
+El proyecto incluye una app de escritorio para Windows que permite ejecutar las
+herramientas de verificación del corpus (`mad-linter`, `mad-snapshot`, `mad-diff`,
+`mad-index`) sin usar la terminal.
+
+```
+gui/
+└── Interfaz Electron — tarjetas por herramienta, drag & drop de carpetas,
+    exportación de reportes a .md / .txt / .pdf / .xlsx
+```
+
+**Inicio rápido** (desde la raíz del repositorio):
+
+```bash
+cd gui
+npm install
+npm start
+```
+
+Si Electron no descarga automáticamente (redes con proxy o antivirus), consultá
+la guía de instalación manual en [`gui/INICIO.md`](gui/INICIO.md).
+
+---
+
 ## Requisitos previos
 
 Antes de instalar el proyecto, necesitás tener:
@@ -283,6 +308,11 @@ sistema-mad/
 │   │
 │   └── PROTOCOLO_DE_RONDA.md      ← Cómo ejecutar un debate manualmente
 │                                     El paso a paso para coordinar múltiples IAs
+│
+├── gui/                    ← Interfaz gráfica de escritorio (Electron)
+│   ├── INICIO.md           ← Instrucciones de instalación y uso
+│   ├── tools-config.json   ← Configuración de herramientas (extensible)
+│   └── renderer/           ← HTML, CSS y JS de la ventana
 │
 ├── logs/                   ← Logs técnicos generados automáticamente
 │                             fallos_modelos.jsonl → qué modelos fallaron y cuándo

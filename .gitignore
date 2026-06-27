@@ -31,3 +31,5 @@ mad-index.json
 !logs/.gitkeep
 !debates/.gitkeep
 !docs/.gitkeep
+
+.claude/
