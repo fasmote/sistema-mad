@@ -48,6 +48,14 @@ const CONFIG = {
     'RF-CORE-PRV-001',
     'RF-CORE-CFG-004',
     'RF-CORE-ANA-001',
+    'RF-MAD-CAND-001',
+    'RF-MAD-CAND-002',
+    'RF-MAD-CAND-003',
+    'RF-MAD-CAND-004',
+    'RF-MAD-CAND-005',
+    'RF-MAD-CAND-006',
+    'RF-MAD-CAND-007',
+    'RF-NFM-AMB-001',
   ]),
 
   // Documentos históricos append-only (B, J): se saltean en el chequeo [C].
