@@ -1,0 +1,119 @@
+--- /tmp/mad-index.orig.cjs	2026-07-06 02:38:50.505913607 +0000
++++ /tmp/clone_sistema-mad/tools/mad-index.cjs	2026-07-06 02:38:50.536262395 +0000
+@@ -41,12 +41,13 @@
+ const CONFIG = {
+   // Patrones de cada tipo de artefacto (cómo se escribe su ID).
+   PATTERNS: {
+-    rf:  /RF-[A-Z]{2,5}-[A-Z]{2,5}-\d{3}/g,    // RF-CORE-IDN-001
+-    rfMad: /RF-MAD-[A-Z]{2,6}-\d{3}/g,          // RF-MAD-CAND-001
+-    da:  /DA-\d{2,3}/g,                          // DA-181
+-    ph:  /PH-[A-Z]{2,4}-\d{3}/g,                 // PH-AMB-001
+-    adr: /ADR-\d{2,3}/g,                         // ADR-034
+-    fut: /FUT-[A-Z]{2,4}-\d{3}|FUT-\d{3}/g,      // FUT-MAD-016 o FUT-001
++    rf:  /RF-[A-Z]{2,5}-[A-Z]{2,5}(?:-[A-Z]{2,7})?-\d{3}/g,   // RF-CORE-IDN-001
++    rfMad: /RF-MAD-[A-Z]{2,6}-\d{3}/g,                        // RF-MAD-CAND-001
++    da:  /DA-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|DA-\d{2,3}/g,    // DA-181 y DA-CDS-MED-001 (compuesto)
++    ph:  /PH-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}/g,              // PH-AMB-001 y PH-CDS-MED-001 (compuesto)
++    adr: /ADR-\d{2,3}/g,                                      // ADR-034
++    fut: /FUT-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|FUT-\d{3}/g,    // FUT-MAD-016 y FUT-ANA-CR-001 (compuesto)
++    gap: /GAP-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}/g,             // NUEVO: GAP como categoria propia (GAP-CCA-EV-001)
+   },
+ 
+   // Nombre de evento: MAYÚSCULAS con guión bajo (PACIENTE_CREADO).
+@@ -72,6 +73,12 @@
+ };
+ 
+ const HEADING_RE = /^\s*(#{1,6})\s+(.*\S)\s*$/;
++// PATCH: fila de tabla que DEFINE un artefacto: | ID | Titulo | ...
++const TABLE_DEF_RE = /^\s*\|\s*`?([A-Z][A-Z0-9-]+-\d{3})`?\s*\|\s*([^|]+?)\s*\|/;
++// PATCH: los IDs terminados en -000 son placeholders, no definiciones vivas.
++function isPlaceholder(id){ return /-000$/.test(id); }
++// PATCH: quita bloques de codigo cercados para que IDs en ejemplos no cuenten como cita/def.
++function stripCode(text){ return text.replace(/```[\s\S]*?```/g, m => m.replace(/[^\n]/g,' ')); }
+ const FNAME_VER_RE = /v(\d+)[._](\d+)/;
+ 
+ /* ----------------------------------------------------------------------------
+@@ -120,22 +127,25 @@
+   const files = new Map(paths.map(p => [p, read(p)]));
+ 
+   // Estructura: por cada tipo, un mapa ID → { definido_en, titulo, citado_en[] }
+-  const index = { rf: {}, da: {}, ph: {}, adr: {}, fut: {}, eventos: {} };
++  const index = { rf: {}, da: {}, ph: {}, adr: {}, fut: {}, gap: {}, eventos: {} };
+   const fileVersions = {};
+ 
+   // Helper para registrar una DEFINICIÓN (desde un encabezado).
+   function registrarDef(tipo, id, file, titulo) {
++    if (isPlaceholder(id)) return;                         // PATCH: -000 no es definicion viva
+     if (!index[tipo][id]) index[tipo][id] = { definido_en: [], titulo: titulo || '', citado_en: [] };
+     if (!index[tipo][id].definido_en.includes(base(file))) index[tipo][id].definido_en.push(base(file));
+     if (titulo && !index[tipo][id].titulo) index[tipo][id].titulo = titulo;
+   }
+   // Helper para registrar una CITA (mención en el texto).
+   function registrarCita(tipo, id, file) {
++    if (isPlaceholder(id)) return;                         // PATCH: -000 placeholder ignorado
+     if (!index[tipo][id]) index[tipo][id] = { definido_en: [], titulo: '', citado_en: [] };
+     if (!index[tipo][id].citado_en.includes(base(file))) index[tipo][id].citado_en.push(base(file));
+   }
+ 
+-  for (const [p, text] of files) {
++  for (const [p, textRaw] of files) {
++    const text = stripCode(textRaw);                       // PATCH: ignorar bloques de codigo
+     const lines = text.split(/\r?\n/);
+ 
+     // Versión del archivo (nombre y metadata).
+@@ -161,6 +171,19 @@
+       }
+     }
+ 
++    // 1b) DEFINICIONES POR FILA DE TABLA: | ID | Titulo | ...  (PATCH)
++    for (const line of lines) {
++      const t = line.match(TABLE_DEF_RE);
++      if (!t) continue;
++      const id = t[1], titulo = t[2].trim().slice(0,120);
++      for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
++        if (new RegExp('^(' + pat.source + ')$').test(id)) {
++          registrarDef((tipo === 'rfMad') ? 'rf' : tipo, id, p, titulo);
++          break;
++        }
++      }
++    }
++
+     // 2) CITAS: buscar todos los IDs en el texto completo.
+     for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
+       const tipoNorm = (tipo === 'rfMad') ? 'rf' : tipo;
+@@ -200,6 +223,10 @@
+   for (const [id, info] of Object.entries(index.adr)) {
+     if (info.definido_en.length > 1) alertas.adr_colisionados.push({ id, en: info.definido_en });
+   }
++  alertas.gap_colisionados = [];                            // PATCH
++  for (const [id, info] of Object.entries(index.gap)) {
++    if (info.definido_en.length > 1) alertas.gap_colisionados.push({ id, en: info.definido_en });
++  }
+ 
+   // Eventos con nombre parecido (mismo primer y último segmento).
+   const grupos = new Map();
+@@ -228,6 +255,7 @@
+       ph: Object.keys(index.ph).length,
+       adr: Object.keys(index.adr).length,
+       fut: Object.keys(index.fut).length,
++      gap: Object.keys(index.gap).length,
+       eventos: Object.keys(index.eventos).length,
+     },
+     rf: index.rf,
+@@ -235,6 +263,7 @@
+     ph: index.ph,
+     adr: index.adr,
+     fut: index.fut,
++    gap: index.gap,
+     eventos: index.eventos,
+     alertas,
+   };
+@@ -245,7 +274,7 @@
+  * --------------------------------------------------------------------------*/
+ function comparar(nuevo, previo) {
+   const cambios = { agregados: {}, eliminados: {} };
+-  for (const tipo of ['rf', 'da', 'ph', 'adr', 'fut', 'eventos']) {
++  for (const tipo of ['rf', 'da', 'ph', 'adr', 'fut', 'gap', 'eventos']) {
+     const idsNuevo = new Set(Object.keys(nuevo[tipo] || {}));
+     const idsPrevio = new Set(Object.keys(previo[tipo] || {}));
+     cambios.agregados[tipo] = [...idsNuevo].filter(id => !idsPrevio.has(id));
