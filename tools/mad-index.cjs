@@ -41,14 +41,17 @@ const path = require('path');
 const CONFIG = {
   // Patrones de cada tipo de artefacto (cómo se escribe su ID).
   PATTERNS: {
-    rf:  /RF-[A-Z]{2,5}-[A-Z]{2,5}(?:-[A-Z]{2,7})?-\d{3}/g,   // RF-CORE-IDN-001
-    rfMad: /RF-MAD-[A-Z]{2,6}-\d{3}/g,                        // RF-MAD-CAND-001
-    da:  /DA-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|DA-\d{2,3}/g,    // DA-181 y DA-CDS-MED-001 (compuesto)
-    ph:  /PH-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}/g,              // PH-AMB-001 y PH-CDS-MED-001 (compuesto)
-    adr: /ADR-\d{2,3}/g,                                      // ADR-034
-    fut: /FUT-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|FUT-\d{3}/g,    // FUT-MAD-016 y FUT-ANA-CR-001 (compuesto)
-    gap: /GAP-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}/g,             // NUEVO: GAP como categoria propia (GAP-CCA-EV-001)
+    // FIX: (?<![A-Z-]) evita matchear un ID embebido dentro de otro (p.ej. ADR-043 dentro de FUT-ADR-043).
+    rf:  /(?<![A-Z-])RF-[A-Z]{2,5}-[A-Z]{2,5}(?:-[A-Z]{2,7})?-\d{3}/g,   // RF-CORE-IDN-001
+    rfMad: /(?<![A-Z-])RF-MAD-[A-Z]{2,6}-\d{3}/g,                        // RF-MAD-CAND-001
+    da:  /(?<![A-Z-])DA-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|(?<![A-Z-])DA-\d{2,3}/g, // DA-181 y DA-CDS-MED-001
+    ph:  /(?<![A-Z-])PH-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}/g,              // PH-AMB-001 y PH-CDS-MED-001
+    adr: /(?<![A-Z-])ADR-\d{2,3}/g,                                      // ADR-034 (no FUT-ADR-043)
+    fut: /(?<![A-Z-])FUT-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|(?<![A-Z-])FUT-\d{3}/g, // FUT-MAD-016 y FUT-ANA-CR-001
+    gap: /(?<![A-Z-])GAP-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}/g,             // GAP-CCA-EV-001
   },
+  // 10ª regla: candidatos del contraste operativo (Documento I). Clase aparte, NO cuentan en el total.
+  CANDIDATE_PATTERN: /(?<![A-Z-])C-(?:RF|DA|PH|ADR|FUT|GAP)-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}/g,
 
   // Nombre de evento: MAYÚSCULAS con guión bajo (PACIENTE_CREADO).
   EVENT_TOKEN: /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+){1,5}\b/g,
@@ -68,6 +71,8 @@ const CONFIG = {
     'RF-CORE-IDN-010', 'RF-CORE-PRV-001', 'RF-CORE-CFG-004', 'RF-CORE-ANA-001',
   ]),
 
+  // Archivos generados que NO deben indexarse a sí mismos (evita auto-cita circular).
+  SKIP_FILES: new Set(['SOS_INDICE_MAESTRO_IDS.md']),
   // Carpeta y nombre de salida por defecto.
   DEFAULT_OUTPUT: 'mad-index.json',
 };
@@ -75,10 +80,59 @@ const CONFIG = {
 const HEADING_RE = /^\s*(#{1,6})\s+(.*\S)\s*$/;
 // PATCH: fila de tabla que DEFINE un artefacto: | ID | Titulo | ...
 const TABLE_DEF_RE = /^\s*\|\s*`?([A-Z][A-Z0-9-]+-\d{3})`?\s*\|\s*([^|]+?)\s*\|/;
+// REGLA 11: definición formal compacta = | `ID — Título` | ... |  (ID completo no embebido, título en la misma celda).
+const TABLE_DEF_COMPACT_RE = /^\s*\|\s*`?(?<![A-Z0-9-])((?:RF|RNF|DA|PH|ADR|FUT|GAP)-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3})\s*[—–-]\s*([^|]+?)`?\s*\|/;
 // PATCH: los IDs terminados en -000 son placeholders, no definiciones vivas.
 function isPlaceholder(id){ return /-000$/.test(id); }
 // PATCH: quita bloques de codigo cercados para que IDs en ejemplos no cuenten como cita/def.
 function stripCode(text){ return text.replace(/```[\s\S]*?```/g, m => m.replace(/[^\n]/g,' ')); }
+// 9ª REGLA (rigurosa): clasifica SOLO-CITADO como RESERVADO/NO-EMITIDO/ABSORBIDO/RENUMERADO
+// solo si hay RELACIÓN SINTÁCTICA EXPLÍCITA entre el marcador y ESE ID (no co-ocurrencia de línea).
+// Evidencia = ventana centrada en el ID. No infiere por cercanía débil.
+function esc(id){ return id.replace(/[-]/g,'\\-'); }
+function ventana(text, idx, p){
+  const start=Math.max(0, idx-70), end=Math.min(text.length, idx+130);
+  return { archivo: base(p), fragmento: text.slice(start,end).replace(/\s+/g,' ').trim() };
+}
+function clasificarMarca(id, files){
+  const R = esc(id);
+  const fam = id.replace(/-(\d{3})$/, '');
+  const num = /-(\d{3})$/.test(id) ? parseInt(id.slice(-3),10) : NaN;
+  for (const [p, textRaw] of files){
+    const text = stripCode(textRaw);
+    // (a) "no se crea <ID>"  → ABSORBIDO si sigue "absorbid..."; si no, NO-EMITIDO
+    let m = new RegExp('no\\s+se\\s+crea\\s+`?'+R+'`?([\\s\\S]{0,90})','i').exec(text);
+    if (m){ const clase = /absorbid[oa]/i.test(m[1]) ? 'ABSORBIDO' : 'NO-EMITIDO';
+      return { clase, evidencia: ventana(text, m.index, p) }; }
+    // (b) "<ID> ... queda absorbido / absorbido en"  (ID sujeto, sin corte de oración)
+    m = new RegExp('`?'+R+'`?[^.\\n]{0,45}(?:queda\\s+)?absorbid[oa]\\b','i').exec(text);
+    if (m) return { clase:'ABSORBIDO', evidencia: ventana(text, m.index, p) };
+    // (c) "renumerado desde <ID>"  y  "<ID> renumerado a"
+    m = new RegExp('renumerad[oa]\\s+desde\\s+`?'+R+'`?','i').exec(text);
+    if (m) return { clase:'RENUMERADO', evidencia: ventana(text, m.index, p) };
+    m = new RegExp('`?'+R+'`?[^.\\n]{0,30}renumerad[oa]\\s+a\\b','i').exec(text);
+    if (m) return { clase:'RENUMERADO', evidencia: ventana(text, m.index, p) };
+    // (d) "<ID> ... no emitido / reservado"  (ID sujeto, mismo enunciado)
+    m = new RegExp('`?'+R+'`?[^.\\n]{0,45}\\bno\\s+emitid[oa]\\b','i').exec(text);
+    if (m) return { clase:'NO-EMITIDO', evidencia: ventana(text, m.index, p) };
+    m = new RegExp('`?'+R+'`?[^.\\n]{0,45}\\breservad[oa]\\b','i').exec(text);
+    if (m) return { clase:'RESERVADO', evidencia: ventana(text, m.index, p) };
+    // (e) RANGO explícito: "<fam>-N1 a <fam>-N2 ... reservad/no emitid", con este ID en el rango
+    if (!isNaN(num)){
+      const rre = new RegExp(esc(fam)+'-(\\d{3})`?\\s*(?:a|hasta|—|-)\\s*`?'+esc(fam)+'-(\\d{3})','gi');
+      let mr;
+      while ((mr = rre.exec(text))){
+        const lo=Math.min(+mr[1],+mr[2]), hi=Math.max(+mr[1],+mr[2]);
+        if (num>=lo && num<=hi){
+          const ctx = text.slice(mr.index, mr.index+170);
+          if (/no\s+emitid[oa]/i.test(ctx)) return { clase:'NO-EMITIDO', evidencia: ventana(text, mr.index, p) };
+          if (/reservad[oa]|hueco\s+documental\s+intencional/i.test(ctx)) return { clase:'RESERVADO', evidencia: ventana(text, mr.index, p) };
+        }
+      }
+    }
+  }
+  return null;
+}
 const FNAME_VER_RE = /v(\d+)[._](\d+)/;
 
 /* ----------------------------------------------------------------------------
@@ -91,6 +145,7 @@ function walkMd(dir, out) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith('.')) continue;
     if (entry.name === 'node_modules') continue;
+    if (CONFIG.SKIP_FILES && CONFIG.SKIP_FILES.has(entry.name)) continue;  // no auto-indexar el índice generado
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walkMd(full, out);
     else if (entry.name.endsWith('.md')) out.push(full);
@@ -127,7 +182,7 @@ function buildIndex(paths) {
   const files = new Map(paths.map(p => [p, read(p)]));
 
   // Estructura: por cada tipo, un mapa ID → { definido_en, titulo, citado_en[] }
-  const index = { rf: {}, da: {}, ph: {}, adr: {}, fut: {}, gap: {}, eventos: {} };
+  const index = { rf: {}, da: {}, ph: {}, adr: {}, fut: {}, gap: {}, eventos: {}, candidatos: {} };
   const fileVersions = {};
 
   // Helper para registrar una DEFINICIÓN (desde un encabezado).
@@ -183,6 +238,19 @@ function buildIndex(paths) {
         }
       }
     }
+    // 1c) REGLA 11: definicion formal compacta | `ID — Titulo` |  (condiciones 1-6: fila real, ID completo, titulo, no narrativa/ejemplo/codigo)
+    for (const line of lines) {
+      const tc = line.match(TABLE_DEF_COMPACT_RE);
+      if (!tc) continue;
+      const id = tc[1], titulo = tc[2].trim().slice(0,120);
+      for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
+        if (tipo === 'CANDIDATE_PATTERN') continue;
+        if (new RegExp('^(' + pat.source + ')$').test(id)) {
+          registrarDef((tipo === 'rfMad') ? 'rf' : tipo, id, p, titulo);
+          break;
+        }
+      }
+    }
 
     // 2) CITAS: buscar todos los IDs en el texto completo.
     for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
@@ -190,6 +258,13 @@ function buildIndex(paths) {
       for (const id of (text.match(pat) || [])) {
         registrarCita(tipoNorm, id, p);
       }
+    }
+
+    // 2b) CANDIDATOS C- (10ª regla): coleccion aparte.
+    for (const cid of (text.match(CONFIG.CANDIDATE_PATTERN) || [])) {
+      if (!index.candidatos) index.candidatos = {};
+      if (!index.candidatos[cid]) index.candidatos[cid] = { citado_en: [] };
+      if (!index.candidatos[cid].citado_en.includes(base(p))) index.candidatos[cid].citado_en.push(base(p));
     }
 
     // 3) EVENTOS: buscar tokens tipo EVENTO_NOMBRE.
@@ -239,6 +314,16 @@ function buildIndex(paths) {
   }
   for (const g of grupos.values()) if (g.length > 1) alertas.eventos_duplicados.push(g);
 
+  // 9ª REGLA: clasificar los SOLO-CITADO (sin definido_en) por marca documental explícita.
+  const clasificacion = {};   // id -> { tipo, clase, evidencia }
+  for (const tipo of ['rf','da','ph','adr','fut','gap']) {
+    for (const [id, info] of Object.entries(index[tipo])) {
+      if (info.definido_en.length) continue;               // solo los no definidos
+      const c = clasificarMarca(id, files);
+      if (c) clasificacion[id] = { tipo, clase: c.clase, evidencia: c.evidencia };
+    }
+  }
+
   // Baseline: la versión más frecuente.
   const vers = {};
   for (const v of Object.values(fileVersions)) if (v) vers[v] = (vers[v] || 0) + 1;
@@ -266,6 +351,8 @@ function buildIndex(paths) {
     gap: index.gap,
     eventos: index.eventos,
     alertas,
+    clasificacion,
+    candidatos: index.candidatos || {},
   };
 }
 
