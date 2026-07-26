@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.01",
+  "checks": [
+    {
+      "path": "docs/documento-canonico.md",
+      "must_contain": ["texto obligatorio"],
+      "must_not_contain": ["texto obsoleto"]
+    }
+  ],
+  "sync_groups": [
+    {
+      "id": "SYNC-001",
+      "title": "Fuente canónica y sus derivados",
+      "triggers": ["docs/documento-canonico.md"],
+      "expected_updates": ["docs/resumen.md", "docs/indice.md"]
+    }
+  ],
+  "state_summary": {
+    "key": "modules",
+    "label": "Módulos",
+    "fields": ["version", "state"]
+  },
+  "context_rule": {
+    "title": "Regla para cambio de contexto",
+    "read_first": ["estado-proyecto.json", "registro.json"],
+    "note": "Una IA no debe afirmar que auditó todo el repo si solo leyó este paquete."
+  }
+}
