@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.01",
+  "release_id": "EJEMPLO-001",
+  "title": "Publicación de ejemplo (plantilla)",
+  "target_version": "v1.0",
+  "release_kind": "document",
+  "corpus_scope": "active-set",
+  "required_documents": [
+    {
+      "path": "docs/mi-documento.md",
+      "document_role": "canonical",
+      "version": "v1.0",
+      "must_contain": ["texto que debe estar presente"]
+    }
+  ],
+  "artifact": {
+    "storage_mode": "external-evidence"
+  },
+  "release_policy": {
+    "require_zero_hard_findings": true,
+    "allow_external_artifact": true,
+    "require_versioned_bytes_for_full_apto": true,
+    "external_artifact_max_verdict": "APTO CON AVISOS"
+  },
+  "known_notices": []
+}
