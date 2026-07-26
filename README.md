@@ -18,6 +18,43 @@ La historia completa de cómo se construyó está en [`docs/HISTORIA_DEL_PROYECT
 
 ---
 
+## Las dos mitades de MAD
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  MITAD DETERMINISTA  (sin costo de IA, corre localmente)    │
+│  Verifica, cuenta, compara y empaqueta documentación.        │
+│  → linter, snapshot, diff, index, pack, impact, release gate │
+├─────────────────────────────────────────────────────────────┤
+│  MITAD DELIBERATIVA  (motor de debate multi-IA)              │
+│  Genera briefings y coordina agentes y rondas.                │
+│  → test_briefing, director y módulos de debate               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+La mitad determinista ya permite sostener un corpus complejo con controles
+reproducibles, incluso sin usar una API de IA.
+
+---
+
+## Motor y cliente
+
+`sistema-mad` es el **motor** y la fuente de verdad de las herramientas
+genéricas. HIS/SOS es su primer **cliente** y aporta casos reales de uso.
+
+```
+Una herramienta nace donde se necesita.
+Cuando demuestra ser genérica y estable, sube a sistema-mad.
+Nunca vive con vida propia en los dos repositorios a la vez.
+```
+
+El mapa vigente está en
+[`docs/coordinacion/MAD_TOOL_REGISTRY.md`](docs/coordinacion/MAD_TOOL_REGISTRY.md)
+y el historial compartido en
+[`docs/MAD_HISTORIAL_DECISIONES.md`](docs/MAD_HISTORIAL_DECISIONES.md).
+
+---
+
 ## Cómo funciona en 5 pasos
 
 ```
@@ -77,6 +114,24 @@ La historia completa de cómo se construyó está en [`docs/HISTORIA_DEL_PROYECT
 | Módulo 2 | 📋 Especificado      | Arquitectura v7 con 77 decisiones            |
 | Módulo 3 | 📋 Especificado      | Consolidación supervisada                    |
 | Módulo 4 | 🔮 POST-MVP          | Memoria persistente con pgvector             |
+
+---
+
+## Herramientas disponibles
+
+| Herramienta | Qué hace | Comando |
+|---|---|---|
+| **mad-linter** | Detecta referencias rotas, IDs duplicados y títulos fabricados | `npm run lint:docs` |
+| **mad-snapshot** | Censa artefactos y detecta pérdidas entre corridas | `npm run snapshot` |
+| **mad-diff** | Compara contenido entre dos versiones del corpus | `node tools/mad-diff.cjs <vieja> <nueva>` |
+| **mad-index** | Genera el índice persistente de artefactos y relaciones | `npm run index:docs` |
+| **mad-pack** | Arma paquetes mínimos de contexto para IA, con controles de privacidad y tamaño | `npm run pack:context -- --list` |
+| **mad-release-gate** | Certifica una publicación contra commit, archivos y hashes | `npm run release:gate -- --release <archivo.json>` |
+| **mad-impact-lite** | Detecta documentos derivados que requieren revisión | `npm run impact:lite -- --registry <archivo.json>` |
+
+Las pruebas específicas se ejecutan con `npm run test:linter`,
+`npm run test:pack`, `npm run test:release-gate` y
+`npm run test:impact-lite`.
 
 ---
 
@@ -159,13 +214,18 @@ Guardar el archivo.
 
 > ⚠️ **Importante:** el archivo `.env` contiene tu API key y **nunca** debe subirse a GitHub. El `.gitignore` ya lo protege automáticamente — no aparecerá en tus commits.
 
-### Paso 4 — Correr el primer test
+### Paso 4 — Correr las pruebas
 
 ```bash
-node test_briefing.js
+npm test
+npm run test:linter
+npm run test:pack
+npm run test:release-gate
+npm run test:impact-lite
 ```
 
-El script prueba que todo funciona correctamente corriendo 5 casos de ejemplo y mostrando el resultado de cada uno.
+`npm test` valida el generador de briefings. Los otros comandos prueban las
+herramientas deterministas de forma independiente.
 
 ---
 
@@ -248,6 +308,18 @@ sistema-mad/
 │                             La CLI que entrevista al usuario
 │                             Correr con: node director.js
 │
+├── tools/
+│   ├── mad-linter.cjs        ← coherencia documental
+│   ├── mad-snapshot.cjs      ← censo y detección de pérdidas
+│   ├── mad-diff.cjs          ← comparación entre versiones
+│   ├── mad-index.cjs         ← índice persistente
+│   ├── mad-pack.cjs          ← paquetes de contexto para IA
+│   ├── test_pack.cjs         ← 41 casos de ground truth de mad-pack
+│   ├── mad-release-gate.cjs  ← puerta determinista de publicación
+│   ├── test_release_gate.cjs ← pruebas de release gate
+│   ├── mad-impact-lite.cjs   ← impacto y sincronización documental
+│   └── test_impact_lite.cjs  ← pruebas de impact lite
+│
 ├── prompts/
 │   └── orquestador_briefing_v1.md
 │                           ← El "system prompt" del Orquestador IA
@@ -298,6 +370,13 @@ sistema-mad/
 │   ├── GLOSARIO.md                ← Definición de todos los términos del proyecto
 │   │                                 Briefing, Handoff, Floor Control, Ground Truth,
 │   │                                 Consensus Drift, StakeSim, etc.
+│   │
+│   ├── MAD_PACK_CONTEXT.md        ← uso y seguridad de mad-pack
+│   ├── MAD_RELEASE_GATE.md        ← publicación determinista
+│   ├── MAD_IMPACT_LITE.md         ← impacto y sincronización documental
+│   ├── MAD_HISTORIAL_DECISIONES.md ← registro vivo de decisiones
+│   ├── examples/                  ← configuraciones y declaraciones de ejemplo
+│   ├── coordinacion/              ← trazabilidad entre Claudio, Claude y ChatGPT
 │   │
 │   ├── MANIFIESTO_ORQUESTADOR.md  ← Las reglas del Orquestador
 │   │                                 Qué debe hacer, qué puede hacer, qué no puede hacer
