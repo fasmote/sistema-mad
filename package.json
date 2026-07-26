@@ -12,6 +12,8 @@
     "index:docs": "node tools/mad-index.cjs ./docs --salida docs/mad-index.json",
     "index:compare": "node tools/mad-index.cjs ./docs --salida docs/mad-index.json --comparar",
     "snapshot": "node tools/mad-snapshot.cjs ./docs --salida docs/.snapshot.json",
+    "pack:context": "node tools/mad-pack.cjs",
+    "test:pack": "node tools/test_pack.cjs",
     "release:gate": "node tools/mad-release-gate.cjs",
     "impact:lite": "node tools/mad-impact-lite.cjs",
     "test:release-gate": "node tools/test_release_gate.cjs",
