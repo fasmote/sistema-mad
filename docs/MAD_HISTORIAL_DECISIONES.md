@@ -186,6 +186,26 @@ especificado pero no fusionado.
 
 ---
 
+### 2026-07-26 — Recuperación, endurecimiento e incorporación de mad-pack v0.2
+
+**Decisión/resultado:** `mad-pack.cjs`, construida previamente pero ausente de
+`main`, fue recuperada, endurecida mediante revisión cruzada e incorporada como
+herramienta `genérica-estable` mediante el PR #2
+(`b9ab38a2bdf489789abe2829fbc696cf2159ac9e`).
+
+**Construido:** `mad-pack` v0.2, su documentación, un ejemplo genérico sin datos
+del SOS y una suite de **41 casos — 41/41 PASS**. La configuración operativa de
+cada cliente queda fuera del motor y `--packs` es obligatorio para operar sobre
+un pack real.
+
+**Pendiente:** incorporar por separado
+`his-core-platform-sos/config/context-packs.json` con los siete packs reales y
+generalizar `mad-render-index.cjs`, que sigue siendo específico del SOS.
+
+**Detalle:** [docs/coordinacion/sesiones/2026-07-26-mad-pack-incorporacion.md](coordinacion/sesiones/2026-07-26-mad-pack-incorporacion.md).
+
+---
+
 <!--
   Próxima entrada: agregar acá arriba de esta línea, siguiendo la plantilla
   de más arriba. No borrar entradas anteriores — es un registro histórico.
