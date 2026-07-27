@@ -1,0 +1,40 @@
+{
+  "PACK-EXAMPLE-001": {
+    "title": "Orientación mínima (ejemplo)",
+    "purpose": "Ejemplo genérico: dar contexto general de un proyecto a una IA nueva.",
+    "visibility": "internal",
+    "max_chars_recomendado": 20000,
+    "files": [
+      "README.md",
+      "docs/GLOSARIO.md"
+    ],
+    "rules": [
+      "No reabrir decisiones cerradas salvo bloqueante real.",
+      "Distinguir claramente qué es núcleo estable y qué es adaptación local."
+    ],
+    "must_not_reopen": [],
+    "expected_output": [
+      "Comprensión general del proyecto",
+      "Preguntas de aclaración si falta contexto"
+    ]
+  },
+
+  "PACK-EXAMPLE-002": {
+    "title": "Presentación pública (ejemplo)",
+    "purpose": "Ejemplo genérico: preparar material presentable para audiencia externa.",
+    "visibility": "public",
+    "max_chars_recomendado": 30000,
+    "files": [
+      "docs/GLOSARIO.md"
+    ],
+    "rules": [
+      "Mantener lenguaje presentable, sin debate crudo ni historia interna.",
+      "No exponer material privado ni fuentes identificables."
+    ],
+    "must_not_reopen": [],
+    "expected_output": [
+      "Resumen ejecutivo",
+      "Riesgos de exposición pública si existen"
+    ]
+  }
+}
