@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================================
- *  MAD-Index v0.1  (Node.js)
+ *  MAD-Index v0.07  (Node.js)
  *  ---------------------------------------------------------------------------
  *  QUE ES: extiende el linter para GUARDAR lo que encuentra, en lugar de solo
  *  imprimirlo. Genera un archivo mad-index.json que es la MEMORIA del proyecto:
@@ -33,6 +33,12 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { extractDefinitions, stripCode } = require('./mad-definition-extractor.cjs');
+const {
+  TITLE_COLLISION_POLICY,
+  groupTitleVariants,
+  collisionMetadata,
+} = require('./mad-title-policy.cjs');
 
 /* ============================================================================
  *  CONFIG  —  Patrones de los artefactos del método SOS/MAD.
@@ -77,15 +83,8 @@ const CONFIG = {
   DEFAULT_OUTPUT: 'mad-index.json',
 };
 
-const HEADING_RE = /^\s*(#{1,6})\s+(.*\S)\s*$/;
-// PATCH: fila de tabla que DEFINE un artefacto: | ID | Titulo | ...
-const TABLE_DEF_RE = /^\s*\|\s*`?([A-Z][A-Z0-9-]+-\d{3})`?\s*\|\s*([^|]+?)\s*\|/;
-// REGLA 11: definición formal compacta = | `ID — Título` | ... |  (ID completo no embebido, título en la misma celda).
-const TABLE_DEF_COMPACT_RE = /^\s*\|\s*`?(?<![A-Z0-9-])((?:RF|RNF|DA|PH|ADR|FUT|GAP)-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3})\s*[—–-]\s*([^|]+?)`?\s*\|/;
 // PATCH: los IDs terminados en -000 son placeholders, no definiciones vivas.
 function isPlaceholder(id){ return /-000$/.test(id); }
-// PATCH: quita bloques de codigo cercados para que IDs en ejemplos no cuenten como cita/def.
-function stripCode(text){ return text.replace(/```[\s\S]*?```/g, m => m.replace(/[^\n]/g,' ')); }
 // 9ª REGLA (rigurosa): clasifica SOLO-CITADO como RESERVADO/NO-EMITIDO/ABSORBIDO/RENUMERADO
 // solo si hay RELACIÓN SINTÁCTICA EXPLÍCITA entre el marcador y ESE ID (no co-ocurrencia de línea).
 // Evidencia = ventana centrada en el ID. No infiere por cercanía débil.
@@ -161,98 +160,79 @@ function expandPaths(args) {
   return [...new Set(out)].sort();
 }
 
-// ¿El título ARRANCA con este ID? Entonces es una DEFINICIÓN (no solo mención).
-function headingStartsWithId(headingText, idPattern) {
-  const src = idPattern.source.replace(/\\d/g, '\\d').replace(/g$/, '');
-  const m = headingText.match(new RegExp('^(' + src + ')'));
-  return m ? m[1] : null;
-}
-
-// Extrae el título legible que sigue a un ID en un encabezado.
-// "### DA-181 — Reunificación de CLN..." → "Reunificación de CLN..."
-function extractTitle(headingText, id) {
-  const after = headingText.slice(headingText.indexOf(id) + id.length);
-  return after.replace(/^[\s—–\-:.]+/, '').trim().slice(0, 120);
-}
-
 /* ----------------------------------------------------------------------------
  *  CONSTRUCCIÓN DEL ÍNDICE
  * --------------------------------------------------------------------------*/
 function buildIndex(paths) {
   const files = new Map(paths.map(p => [p, read(p)]));
+  const definitions = extractDefinitions(files);
 
   // Estructura: por cada tipo, un mapa ID → { definido_en, titulo, citado_en[] }
   const index = { rf: {}, da: {}, ph: {}, adr: {}, fut: {}, gap: {}, eventos: {}, candidatos: {} };
   const fileVersions = {};
 
-  // Helper para registrar una DEFINICIÓN (desde un encabezado).
-  function registrarDef(tipo, id, file, titulo) {
-    if (isPlaceholder(id)) return;                         // PATCH: -000 no es definicion viva
-    if (!index[tipo][id]) index[tipo][id] = { definido_en: [], titulo: titulo || '', citado_en: [] };
-    if (!index[tipo][id].definido_en.includes(base(file))) index[tipo][id].definido_en.push(base(file));
-    if (titulo && !index[tipo][id].titulo) index[tipo][id].titulo = titulo;
+  function emptyArtifactInfo() {
+    return {
+      definido_en: [],
+      titulo: '',
+      citado_en: [],
+      definiciones: [],
+      variantes: [],
+      colision_titulo: collisionMetadata([]),
+    };
+  }
+
+  function updateTitleAnalysis(info) {
+    const groups = groupTitleVariants(info.definiciones);
+    info.variantes = groups.map(group => ({
+      titulo_completo: group.titulo,
+      origenes: group.definiciones.map(definition => ({
+        documento: definition.documento,
+        ruta: definition.ruta,
+        version: definition.version,
+        forma: definition.forma,
+        linea_diagnostica: definition.linea_diagnostica,
+      })),
+    }));
+    info.colision_titulo = collisionMetadata(info.definiciones);
+  }
+
+  // Helper para registrar una DEFINICIÓN conservando cada ocurrencia y origen.
+  function registrarDef(definition) {
+    const { tipo, id } = definition;
+    if (isPlaceholder(id) || !index[tipo]) return;
+    if (!index[tipo][id]) index[tipo][id] = emptyArtifactInfo();
+    const info = index[tipo][id];
+    if (!info.definido_en.includes(definition.documento)) info.definido_en.push(definition.documento);
+    if (definition.titulo_completo && !info.titulo) info.titulo = definition.titulo_completo;
+    info.definiciones.push({
+      titulo_completo: definition.titulo_completo,
+      documento: definition.documento,
+      ruta: definition.ruta,
+      version: definition.version,
+      forma: definition.forma,
+      linea_diagnostica: definition.linea_diagnostica,
+    });
   }
   // Helper para registrar una CITA (mención en el texto).
   function registrarCita(tipo, id, file) {
     if (isPlaceholder(id)) return;                         // PATCH: -000 placeholder ignorado
-    if (!index[tipo][id]) index[tipo][id] = { definido_en: [], titulo: '', citado_en: [] };
+    if (!index[tipo][id]) index[tipo][id] = tipo === 'eventos'
+      ? { definido_en: [], titulo: '', citado_en: [] }
+      : emptyArtifactInfo();
     if (!index[tipo][id].citado_en.includes(base(file))) index[tipo][id].citado_en.push(base(file));
   }
 
+  for (const definition of definitions) registrarDef(definition);
+
   for (const [p, textRaw] of files) {
     const text = stripCode(textRaw);                       // PATCH: ignorar bloques de codigo
-    const lines = text.split(/\r?\n/);
 
     // Versión del archivo (nombre y metadata).
     const mfn = base(p).match(FNAME_VER_RE);
     fileVersions[p] = mfn ? `${mfn[1]}.${mfn[2]}` : null;
 
-    // 1) DEFINICIONES: recorrer encabezados.
-    for (const line of lines) {
-      const h = line.match(HEADING_RE);
-      if (!h) continue;
-      const txt = h[2];
-
-      // ¿El encabezado define un RF / RF-MAD / DA / PH / ADR / FUT?
-      for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
-        const idPattern = new RegExp('^(' + pat.source + ')');
-        const m = txt.match(idPattern);
-        if (m) {
-          const id = m[1];
-          const titulo = extractTitle(txt, id);
-          const tipoNorm = (tipo === 'rfMad') ? 'rf' : tipo;
-          registrarDef(tipoNorm, id, p, titulo);
-        }
-      }
-    }
-
-    // 1b) DEFINICIONES POR FILA DE TABLA: | ID | Titulo | ...  (PATCH)
-    for (const line of lines) {
-      const t = line.match(TABLE_DEF_RE);
-      if (!t) continue;
-      const id = t[1], titulo = t[2].trim().slice(0,120);
-      for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
-        if (new RegExp('^(' + pat.source + ')$').test(id)) {
-          registrarDef((tipo === 'rfMad') ? 'rf' : tipo, id, p, titulo);
-          break;
-        }
-      }
-    }
-    // 1c) REGLA 11: definicion formal compacta | `ID — Titulo` |  (condiciones 1-6: fila real, ID completo, titulo, no narrativa/ejemplo/codigo)
-    for (const line of lines) {
-      const tc = line.match(TABLE_DEF_COMPACT_RE);
-      if (!tc) continue;
-      const id = tc[1], titulo = tc[2].trim().slice(0,120);
-      for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
-        if (tipo === 'CANDIDATE_PATTERN') continue;
-        if (new RegExp('^(' + pat.source + ')$').test(id)) {
-          registrarDef((tipo === 'rfMad') ? 'rf' : tipo, id, p, titulo);
-          break;
-        }
-      }
-    }
-
-    // 2) CITAS: buscar todos los IDs en el texto completo.
+    // 1) CITAS: buscar todos los IDs en el texto completo.
     for (const [tipo, pat] of Object.entries(CONFIG.PATTERNS)) {
       const tipoNorm = (tipo === 'rfMad') ? 'rf' : tipo;
       for (const id of (text.match(pat) || [])) {
@@ -260,18 +240,22 @@ function buildIndex(paths) {
       }
     }
 
-    // 2b) CANDIDATOS C- (10ª regla): coleccion aparte.
+    // 1b) CANDIDATOS C- (10ª regla): coleccion aparte.
     for (const cid of (text.match(CONFIG.CANDIDATE_PATTERN) || [])) {
       if (!index.candidatos) index.candidatos = {};
       if (!index.candidatos[cid]) index.candidatos[cid] = { citado_en: [] };
       if (!index.candidatos[cid].citado_en.includes(base(p))) index.candidatos[cid].citado_en.push(base(p));
     }
 
-    // 3) EVENTOS: buscar tokens tipo EVENTO_NOMBRE.
+    // 2) EVENTOS: buscar tokens tipo EVENTO_NOMBRE.
     for (const ev of (text.match(CONFIG.EVENT_TOKEN) || [])) {
       if (CONFIG.EVENT_STOPLIST.has(ev)) continue;
       registrarCita('eventos', ev, p);
     }
+  }
+
+  for (const tipo of ['rf', 'da', 'ph', 'adr', 'fut', 'gap']) {
+    for (const info of Object.values(index[tipo])) updateTitleAnalysis(info);
   }
 
   // ── ALERTAS derivadas ──────────────────────────────────────────────────
@@ -281,6 +265,7 @@ function buildIndex(paths) {
     da_colisionadas: [],     // definidas en más de un documento
     ph_colisionadas: [],
     adr_colisionados: [],
+    titulos_colisionados: [],
     eventos_duplicados: [],  // nombres muy parecidos
   };
 
@@ -301,6 +286,13 @@ function buildIndex(paths) {
   alertas.gap_colisionados = [];                            // PATCH
   for (const [id, info] of Object.entries(index.gap)) {
     if (info.definido_en.length > 1) alertas.gap_colisionados.push({ id, en: info.definido_en });
+  }
+  for (const tipo of ['rf', 'da', 'ph', 'adr', 'fut', 'gap']) {
+    for (const [id, info] of Object.entries(index[tipo])) {
+      if (info.colision_titulo.estado === 'COLISIONADO') {
+        alertas.titulos_colisionados.push({ id, tipo, variantes: info.colision_titulo.variantes });
+      }
+    }
   }
 
   // Eventos con nombre parecido (mismo primer y último segmento).
@@ -331,6 +323,7 @@ function buildIndex(paths) {
 
   return {
     generado: new Date().toISOString(),
+    politica_titulos: TITLE_COLLISION_POLICY,
     baseline,
     archivos_analizados: paths.length,
     archivos: paths.map(base),
@@ -376,7 +369,7 @@ function comparar(nuevo, previo) {
 function reportar(idx, cambios) {
   const bar = '='.repeat(66);
   console.log(bar);
-  console.log('  MAD-Index v0.1  —  Índice persistente de artefactos');
+  console.log('  MAD-Index v0.07  —  Índice persistente de artefactos');
   console.log('  Baseline: v' + idx.baseline + '  |  Archivos: ' + idx.archivos_analizados);
   console.log(bar);
 
@@ -396,6 +389,10 @@ function reportar(idx, cambios) {
   if (a.da_colisionadas.length) console.log('    X DA en más de un documento: ' + a.da_colisionadas.map(d => d.id).join(', '));
   if (a.ph_colisionadas.length) console.log('    X PH en más de un documento: ' + a.ph_colisionadas.map(d => d.id).join(', '));
   if (a.adr_colisionados.length) console.log('    X ADR en más de un documento: ' + a.adr_colisionados.map(d => d.id).join(', '));
+  if (a.titulos_colisionados.length) {
+    console.log('    !  Títulos colisionados no resueltos: ' +
+      a.titulos_colisionados.map(d => d.id).join(', '));
+  }
   if (a.eventos_duplicados.length) {
     console.log('    !  Eventos con nombre parecido:');
     for (const g of a.eventos_duplicados) console.log('       ' + g.join('  vs  '));

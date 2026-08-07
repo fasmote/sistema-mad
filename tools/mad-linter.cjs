@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================================
- *  MAD-Linter v0.4  (Node.js)
+ *  MAD-Linter v0.5  (Node.js)
  *  ---------------------------------------------------------------------------
  *  QUE ES: un programa que LEE tus .md y AVISA inconsistencias. No cambia nada;
  *  solo señala. Es el "corrector ortográfico de coherencia" del método SOS/MAD.
@@ -34,6 +34,13 @@
 'use strict';
 const fs = require('fs');     // leer archivos del disco.
 const path = require('path'); // manejar nombres/rutas.
+const { extractDefinitions } = require('./mad-definition-extractor.cjs');
+const {
+  TITLE_COLLISION_POLICY,
+  titleSimilarity,
+  hasSubstantiveDivergence,
+  groupTitleVariants,
+} = require('./mad-title-policy.cjs');
 
 /* ============================================================================
  *  CONFIG  —  TODO lo específico del proyecto va acá (y nada más).
@@ -44,6 +51,7 @@ const CONFIG = {
 
   // RF de backlog/futuro: si se referencian sin definir, NO son error (se informan).
   BACKLOG_RF: new Set([
+    'RF-TST-DOC-010',
     'RF-CORE-IDN-010',
     'RF-CORE-PRV-001',
     'RF-CORE-CFG-004',
@@ -74,23 +82,6 @@ const CONFIG = {
   // Forma de un nombre de evento.
   EVENT_TOKEN: /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g,
 
-  // [H] IDs cuyo título se verifica entre documentos (DA, ADR, PH, FUT, RF).
-  // El chequeo compara: ¿el mismo ID tiene el mismo título en todos lados?
-  TITLED_ID_PATTERNS: [
-    { tipo: 'RF',  re: /RF-[A-Z]{2,5}-[A-Z]{2,5}-\d{3}/ },
-    { tipo: 'DA',  re: /DA-\d{2,3}/ },
-    { tipo: 'ADR', re: /ADR-\d{2,3}/ },
-    { tipo: 'PH',  re: /PH-[A-Z]{2,4}-\d{3}/ },
-    { tipo: 'FUT', re: /FUT-[A-Z]{2,4}-\d{3}/ },
-  ],
-
-  // [H] Documentos históricos donde SE ESPERA que un ID tenga títulos distintos
-  // (el ledger de debate guarda variantes a propósito). Se informan, no se marcan duro.
-  TITLE_CHECK_SKIP: /_B_|_J_/,
-
-  // [H] Umbral: títulos que difieren en menos de este % se consideran "el mismo
-  // con edición menor" (no alucinación). Por encima, son títulos realmente distintos.
-  TITLE_SIMILARITY_THRESHOLD: 0.45,
 };
 
 const HEADING_RE = /^\s*(#{1,6})\s+(.*\S)\s*$/;
@@ -120,38 +111,6 @@ function expandPaths(args) {
     else out.push(a);
   }
   return [...new Set(out)].sort();
-}
-
-function headingDefinesId(headingText, idRegexSource) {
-  const m = headingText.match(new RegExp('^(' + idRegexSource + ')'));
-  return m ? m[1] : null;
-}
-
-// Normaliza un título para comparar: minúsculas, sin tildes, sin puntuación, sin espacios extra.
-function normalizarTitulo(t) {
-  return t.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // quitar tildes
-    .replace(/[^a-z0-9\s]/g, ' ')                       // puntuación -> espacio
-    .replace(/\s+/g, ' ').trim();
-}
-
-// Similitud entre dos títulos: proporción de palabras compartidas (Jaccard).
-function similitudTitulos(a, b) {
-  const setA = new Set(normalizarTitulo(a).split(' ').filter(Boolean));
-  const setB = new Set(normalizarTitulo(b).split(' ').filter(Boolean));
-  if (!setA.size || !setB.size) return 0;
-  let comunes = 0;
-  for (const w of setA) if (setB.has(w)) comunes++;
-  return comunes / (setA.size + setB.size - comunes); // Jaccard
-}
-
-// Extrae el título que sigue a un ID en un encabezado.
-// "### DA-181 — Reunificación de CLN..." → "Reunificación de CLN..."
-function tituloDespuesDeId(headingText, id) {
-  const idx = headingText.indexOf(id);
-  if (idx === -1) return '';
-  const after = headingText.slice(idx + id.length);
-  return after.replace(/^[\s—–\-:.]+/, '').trim();
 }
 
 function loadEventCatalog(files) {
@@ -200,62 +159,43 @@ function parseAnexoBEvents(files) {
  *  títulos puede ser fabricado (el caso Gemini en HIG-B-001).
  * --------------------------------------------------------------------------*/
 function checkTitleConsistency(files) {
-  // Mapa: ID -> [ { titulo, archivo } ]
-  const titlesById = new Map();
-
-  for (const [p, text] of files) {
-    if (CONFIG.TITLE_CHECK_SKIP.test(base(p))) continue; // saltear ledger histórico
-    const lines = text.split(/\r?\n/);
-    for (const line of lines) {
-      const h = line.match(HEADING_RE);
-      if (!h) continue;
-      const headingText = h[2];
-      for (const { re } of CONFIG.TITLED_ID_PATTERNS) {
-        const id = headingDefinesId(headingText, re.source);
-        if (!id) continue;
-        const titulo = tituloDespuesDeId(headingText, id);
-        if (!titulo || titulo.length < 4) continue; // sin título legible, ignorar
-        if (!titlesById.has(id)) titlesById.set(id, []);
-        titlesById.get(id).push({ titulo, archivo: base(p) });
-      }
-    }
+  const definitionsById = new Map();
+  for (const definition of extractDefinitions(files)) {
+    if (!definitionsById.has(definition.id)) definitionsById.set(definition.id, []);
+    definitionsById.get(definition.id).push(definition);
   }
 
-  // Detectar IDs con títulos divergentes.
-  const divergentes = [];
-  for (const [id, apariciones] of titlesById) {
-    if (apariciones.length < 2) continue;
-    // ¿Hay al menos un par de títulos suficientemente distintos?
-    let hayDivergencia = false;
-    for (let i = 0; i < apariciones.length; i++) {
-      for (let j = i + 1; j < apariciones.length; j++) {
-        const sim = similitudTitulos(apariciones[i].titulo, apariciones[j].titulo);
-        if (sim < CONFIG.TITLE_SIMILARITY_THRESHOLD) { hayDivergencia = true; break; }
-      }
-      if (hayDivergencia) break;
-    }
-    if (hayDivergencia) {
-      // Agrupar títulos únicos para el reporte.
-      const unicos = [];
-      for (const a of apariciones) {
-        const yaEsta = unicos.find(u => similitudTitulos(u.titulo, a.titulo) >= 0.85);
-        if (yaEsta) { if (!yaEsta.archivos.includes(a.archivo)) yaEsta.archivos.push(a.archivo); }
-        else unicos.push({ titulo: a.titulo, archivos: [a.archivo] });
-      }
-      if (unicos.length > 1) divergentes.push({ id, variantes: unicos });
-    }
+  const divergences = [];
+  for (const [id, definitions] of definitionsById) {
+    if (!hasSubstantiveDivergence(definitions)) continue;
+    const variants = groupTitleVariants(definitions).map(group => ({
+      titulo: group.titulo,
+      archivos: group.archivos,
+      definiciones: group.definiciones,
+    }));
+    if (variants.length > 1) divergences.push({ id, variantes: variants });
   }
-  return divergentes;
+  return divergences.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /* ----------------------------------------------------------------------------
  *  ANALISIS PRINCIPAL
  * --------------------------------------------------------------------------*/
-function lint(paths) {
+function lint(paths, options = {}) {
+  const titleMode = options.titleMode || 'audit';
+  if (!['audit', 'error'].includes(titleMode)) throw new Error(`Modo [H] inválido: ${titleMode}`);
   const files = new Map(paths.map(p => [p, read(p)]));
 
   const rfDef = new Map(), rfRef = new Map(), daDef = new Map();
   const dupHeadings = [], verIssues = [], fileVersions = {};
+
+  // [A], [B] y [H] comparten la misma noción de definición formal.
+  for (const definition of extractDefinitions(files)) {
+    const target = definition.tipo === 'rf' ? rfDef : definition.tipo === 'da' ? daDef : null;
+    if (!target) continue;
+    if (!target.has(definition.id)) target.set(definition.id, new Set());
+    target.get(definition.id).add(definition.ruta);
+  }
 
   for (const [p, text] of files) {
     const lines = text.split(/\r?\n/);
@@ -264,11 +204,6 @@ function lint(paths) {
     for (const line of lines) {
       const h = line.match(HEADING_RE);
       if (h) {
-        const headingText = h[2];
-        const rfHere = headingDefinesId(headingText, 'RF-[A-Z]{2,5}-[A-Z]{2,5}-\\d{3}');
-        if (rfHere) { if (!rfDef.has(rfHere)) rfDef.set(rfHere, new Set()); rfDef.get(rfHere).add(p); }
-        const daHere = headingDefinesId(headingText, 'DA-\\d{2,3}');
-        if (daHere) { if (!daDef.has(daHere)) daDef.set(daHere, new Set()); daDef.get(daHere).add(p); }
         const nm = line.match(NUMHEAD_RE);
         if (nm) numCount.set(nm[1], (numCount.get(nm[1]) || 0) + 1);
       }
@@ -322,7 +257,7 @@ function lint(paths) {
     paths, rfRef, defined, dangling, backlogRefs, dupRf, dupDa,
     dupHeadings, verIssues, fileVersions,
     catalog, anexoEvents, eventsNotInCatalog, similarGroups,
-    titleDivergences,
+    titleDivergences, titleMode,
   };
 }
 
@@ -333,7 +268,7 @@ function report(r) {
   let findings = 0;
   const bar = '='.repeat(66);
   console.log(bar);
-  console.log('  MAD-Linter v0.4  —  Reporte de consistencia documental');
+  console.log('  MAD-Linter v0.5  —  Reporte de consistencia documental');
   console.log('  Archivos analizados: ' + r.paths.length);
   console.log(bar);
 
@@ -376,30 +311,50 @@ function report(r) {
   console.log('\n[H] Títulos divergentes para el mismo ID (posible ALUCINACIÓN)');
   if (r.titleDivergences.length) {
     for (const d of r.titleDivergences) {
-      findings++;
-      console.log('    X ' + d.id + ' aparece con ' + d.variantes.length + ' títulos distintos:');
+      if (r.titleMode === 'error') findings++;
+      console.log('    ' + (r.titleMode === 'error' ? 'X ' : '! ') + d.id +
+        ' aparece con ' + d.variantes.length + ' títulos distintos:');
       for (const v of d.variantes) {
         const tituloCorto = v.titulo.length > 70 ? v.titulo.slice(0, 70) + '...' : v.titulo;
         console.log('        - "' + tituloCorto + '"  [' + v.archivos.join(', ') + ']');
       }
     }
-    console.log('    -> Verificá contra la fuente: uno de los títulos puede ser fabricado.');
+    console.log('    -> Estado: NO RESUELTA. Verificá los orígenes; ninguna variante es canónica.');
   } else {
     console.log('    OK  cada ID tiene un título consistente en todos los documentos');
   }
 
   console.log('\n' + bar);
-  console.log('  Hallazgos duros (A-F, H): ' + findings + '  |  Avisos (G): ' + r.similarGroups.length);
+  console.log('  Hallazgos duros: ' + findings + '  |  Avisos: ' +
+    (r.similarGroups.length + (r.titleMode === 'audit' ? r.titleDivergences.length : 0)));
+  console.log('  Modo [H]: ' + r.titleMode + '  |  Política: ' + TITLE_COLLISION_POLICY.version);
   console.log(bar);
   return findings;
 }
 
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const paths = expandPaths(args.length ? args : ['.']);
+  let titleMode = 'audit';
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--title-mode' && args[i + 1]) { titleMode = args[++i]; continue; }
+    if (args[i].startsWith('--title-mode=')) { titleMode = args[i].slice('--title-mode='.length); continue; }
+    positional.push(args[i]);
+  }
+  if (!['audit', 'error'].includes(titleMode)) {
+    console.error('Modo [H] inválido. Usá --title-mode audit|error.');
+    process.exit(2);
+  }
+  const paths = expandPaths(positional.length ? positional : ['.']);
   if (!paths.length) { console.log('No encontré archivos .md.'); process.exit(1); }
-  const findings = report(lint(paths));
+  const findings = report(lint(paths, { titleMode }));
   process.exit(findings > 0 ? 1 : 0);
 }
 
-module.exports = { lint, report, checkTitleConsistency, similitudTitulos };
+module.exports = {
+  lint,
+  report,
+  checkTitleConsistency,
+  similitudTitulos: titleSimilarity,
+  TITLE_COLLISION_POLICY,
+};
