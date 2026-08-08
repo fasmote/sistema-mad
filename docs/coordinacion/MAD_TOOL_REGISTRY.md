@@ -40,10 +40,10 @@ Nunca vive con vida propia en los dos repositorios a la vez.
 
 | Herramienta | Versión | Estado | Qué hace | Mantiene |
 |---|---|---|---|---|
-| `mad-definition-extractor.cjs` | v0.1 | genérica-estable | Extrae definiciones formales de encabezados y tablas; excluye equivalencias, derivaciones, estados y catálogos mediante sección o esquema de columnas | Claude + ChatGPT + Claudio + SOS |
+| `mad-definition-extractor.cjs` | v0.2 | genérica-estable | Extrae definiciones formales de encabezados y tablas; evalúa la sección inmediata, excluye encabezados de rango, infiere la columna ID por contenido mayoritario acotado a `col0` y distingue esquemas explícitos, compactos, no definitorios y tablas sin encabezado | Claude + ChatGPT + Claudio + SOS |
 | `mad-title-policy.cjs` | v0.1 | genérica-estable | Política versionada y compartida de normalización, similitud Jaccard, divergencia y agrupación de títulos | Claude + ChatGPT + Claudio + SOS |
 | `mad-linter.cjs` | v0.5 | genérica-estable | Coherencia documental; [H] usa el extractor común, cubre tablas/FUT-NNN/B/J y ofrece modos `audit` y `error` | Claude + ChatGPT + Claudio + SOS |
-| `test_linter.cjs` | v0.5 | genérica-estable | Suite sintética del linter, extractor, política e índice (16 casos; sin corpus cliente) | Claude + ChatGPT + Claudio + SOS |
+| `test_linter.cjs` | v0.6 | genérica-estable | Suite sintética del linter, extractor, política e índice (28 casos; sin corpus cliente) | Claude + ChatGPT + Claudio + SOS |
 | `mad-snapshot.cjs` | v0.1 | genérica-estable | Censo de artefactos con sello temporal y detección de pérdidas | Claude + Claudio |
 | `mad-diff.cjs` | v0.1 | genérica-estable | Compara contenido de artefactos entre versiones | Claude + Claudio |
 | `mad-index.cjs` | v0.07 | genérica-estable; adopción SOS pendiente | Índice persistente con JSON aditivo: conserva escalares y expone ocurrencias, variantes, orígenes y colisiones no resueltas | Claude + ChatGPT + Claudio + SOS |
@@ -102,11 +102,20 @@ umbral de divergencia `0.45`, agrupación visual `0.85` y normalización
 `lowercase-no-diacritics-no-punctuation`.
 
 Las tablas de equivalencia, derivación, estado y catálogo no se consideran
-definiciones cuando lo indica el encabezado de sección. Fuera de esas secciones,
-un esquema con columnas de ID y título/definición cuenta como definición; si no
-hay columna de título y aparecen columnas relacionales, de estado o catálogo, se
-excluye. El formato compacto `ID — Título` define sólo fuera de las secciones
-excluidas.
+definiciones cuando lo indica la sección inmediata. Fuera de esas secciones, el
+extractor distingue cuatro modos: `explicit-schema` para una columna ID reconocida
+por encabezado o inferida porque la mayoría de las celdas de la primera columna
+(`col0`) comienza con un artefacto, más una columna de título reconocida;
+`compact-only` para esquemas parciales o
+desconocidos; `legacy-row` para tablas sin encabezado; y `none` para esquemas no
+definitorios. Sólo el modo explícito y las tablas históricas sin encabezado admiten
+extracción posicional; el modo compacto exige `ID — Título` en una misma celda.
+Una columna adicional de destino o estado no invalida un par explícito ID/título:
+puede ser metadato de una definición. Sin ese par, las columnas relacionales, de
+estado o catálogo excluyen la tabla. Los encabezados que declaran rangos de IDs no
+se registran como definiciones individuales.
+Nota de alcance: **inferencia de columna ID acotada a col0**. No se inspeccionan
+columnas posteriores para promover una tabla a `explicit-schema`.
 Las colisiones se publican como no resueltas: ninguna variante se vuelve canónica
 por acción del toolchain.
 

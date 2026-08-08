@@ -14,7 +14,7 @@ const os = require('os');
 const path = require('path');
 const { lint, report, checkTitleConsistency, similitudTitulos } = require('./mad-linter.cjs');
 const { buildIndex } = require('./mad-index.cjs');
-const { extractDefinitions } = require('./mad-definition-extractor.cjs');
+const { extractDefinitions, tablePolicy } = require('./mad-definition-extractor.cjs');
 const { TITLE_COLLISION_POLICY } = require('./mad-title-policy.cjs');
 
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'madlint-'));
@@ -309,11 +309,171 @@ const falsePositiveFixture = tmp('MAD_Fixture_v9_99_X_NoDefiniciones.md',
   check('16. Modo error conserva el bloqueo futuro de [H]', errorFindings === 2);
 }
 
+// 17-18. La sección inmediata gobierna la exclusión, no toda la jerarquía.
+const sectionModeFixture = tmp('MAD_Fixture_v9_99_TST_Secciones.md',
+`# Estados sintéticos del documento
+| Versión | v9.99 |
+
+## Definiciones válidas
+| ID | Pregunta |
+|---|---|
+| PH-TST-101 | ¿Debe conservarse esta definición sintética? |
+
+## Estados
+| ID | Título |
+|---|---|
+| PH-TST-102 | Estado sintético que no constituye definición |
+`);
+
+{
+  const definitions = extractDefinitions(new Map([
+    [sectionModeFixture, fs.readFileSync(sectionModeFixture, 'utf8')],
+  ]));
+  const byId = new Map(definitions.map(definition => [definition.id, definition]));
+  check('17. Extractor usa la sección inmediata y no queda envenenado por un ancestro',
+    byId.get('PH-TST-101')?.forma === 'tabla');
+  check('18. Extractor mantiene la exclusión bajo una sección inmediata de Estados',
+    !byId.has('PH-TST-102'));
+}
+
+// 19. Un encabezado de rango no define el primer ID; un título ordinario con "a " sí.
+const rangeHeadingFixture = tmp('MAD_Fixture_v9_99_TST_Rangos.md',
+`# Rangos sintéticos
+| Versión | v9.99 |
+
+### DA-TST-101 a DA-TST-177 — Rango sintético
+
+### DA-TST-103 a 177 — Rango sintético abreviado
+
+### DA-TST-101 — Individual sintético
+
+### DA-TST-102 — a propósito del archivo sintético
+`);
+
+{
+  const definitions = extractDefinitions(new Map([
+    [rangeHeadingFixture, fs.readFileSync(rangeHeadingFixture, 'utf8')],
+  ])).map(definition => ({ id: definition.id, titulo: definition.titulo_completo, forma: definition.forma }));
+  const expected = [
+    { id: 'DA-TST-101', titulo: 'Individual sintético', forma: 'encabezado' },
+    { id: 'DA-TST-102', titulo: 'a propósito del archivo sintético', forma: 'encabezado' },
+  ];
+  check('19. Extractor excluye rangos sin confundir títulos ordinarios que empiezan con "a "',
+    JSON.stringify(definitions) === JSON.stringify(expected));
+}
+
+// 20-24. Modos de tabla: desconocido, compacto, explícito, catálogo y legado.
+const tableModeFixture = tmp('MAD_Fixture_v9_99_TST_ModosTabla.md',
+`# Modos sintéticos de tabla
+| Versión | v9.99 |
+
+## Horizonte sintético
+| RF | Horizonte | Motivo |
+|---|---|---|
+| RF-TST-MOD-101 | MVP1 | Valor sintético no definitorio |
+
+## Formato compacto
+| Artefacto | Nota |
+|---|---|
+| ADR-902 — Seleccionar un orden sintético para los paquetes | prueba |
+
+## Esquemas explícitos
+| ID | Enunciado |
+|---|---|
+| DA-TST-103 | Enunciado sintético reconocido como título |
+
+| ID futuro | Tema |
+|---|---|
+| FUT-TST-103 | Tema sintético para análisis futuro |
+
+| ID sugerido | Tema |
+|---|---|
+| GAP-TST-103 | Tema sintético sugerido |
+
+## Tabla sintética sin encabezado
+| DA-TST-104 | Definición sintética posicional heredada |
+
+## Catálogo
+| ID | Título |
+|---|---|
+| PH-TST-103 | Entrada sintética de catálogo |
+`);
+
+{
+  const definitions = extractDefinitions(new Map([
+    [tableModeFixture, fs.readFileSync(tableModeFixture, 'utf8')],
+  ]));
+  const byId = new Map(definitions.map(definition => [definition.id, definition]));
+  check('20. Esquema desconocido no usa interpretación posicional',
+    !byId.has('RF-TST-MOD-101') && tablePolicy(['RF', 'Horizonte', 'Motivo'], '').mode === 'compact-only');
+  check('21. Esquema desconocido conserva una definición compacta',
+    byId.get('ADR-902')?.forma === 'tabla-compacta');
+  check('22. Encabezados ampliados ID/Enunciado e ID futuro/sugerido/Tema son explícitos',
+    ['DA-TST-103', 'FUT-TST-103', 'GAP-TST-103'].every(id => byId.get(id)?.forma === 'tabla') &&
+    tablePolicy(['ID', 'Enunciado'], '').mode === 'explicit-schema' &&
+    tablePolicy(['ID futuro', 'Tema'], '').mode === 'explicit-schema' &&
+    tablePolicy(['ID sugerido', 'Tema'], '').mode === 'explicit-schema' &&
+    ['RF', 'DA', 'PH', 'ADR', 'FUT', 'GAP'].every(idHeader =>
+      tablePolicy([idHeader, 'Tema'], '').mode === 'explicit-schema'));
+  check('23. Sección inmediata de Catálogo continúa excluida',
+    !byId.has('PH-TST-103'));
+  check('24. Tabla sin encabezado conserva la compatibilidad posicional legacy-row',
+    byId.get('DA-TST-104')?.forma === 'tabla' && tablePolicy(null, '').mode === 'legacy-row');
+}
+
+// 25-28. Inferencia de columna ID por contenido y recuperación declarada de backlog.
+const contentIdFixture = tmp('MAD_Fixture_v9_99_TST_ColumnaIdPorContenido.md',
+`# Inferencia sintética de columna ID
+| Versión | v9.99 |
+
+## Candidatos sintéticos
+| ID candidato | Título | Motivo | Relación funcional |
+|---|---|---|---|
+| ADR-TST-027 | Motor sintético | Motivo sintético | Relación sintética |
+
+## Horizonte sintético por contenido
+| RF | Horizonte | Motivo |
+|---|---|---|
+| RF-TST-MOD-101 | MVP1 | Motivo sintético no definitorio |
+
+## Backlog sintético con destino
+| ID | Tema | Motivo / Disparador | Destino |
+|---|---|---|---|
+| FUT-TST-005 | Tema sintético | Disparador sintético | NFM X |
+
+## Hallazgos sintéticos diferidos a ADR técnico
+| Tema | Motivo de diferimiento | ADR sugerido |
+|---|---|---|
+| Tema sintético del hallazgo | Motivo sintético | ADR-TST-001 |
+`);
+
+{
+  const text = fs.readFileSync(contentIdFixture, 'utf8');
+  const definitions = extractDefinitions(new Map([[contentIdFixture, text]]));
+  const byId = new Map(definitions.map(definition => [definition.id, definition]));
+  const candidateRows = [{ cells: ['ADR-TST-027', 'Motor sintético', 'Motivo sintético', 'Relación sintética'] }];
+  const horizonRows = [{ cells: ['RF-TST-MOD-101', 'MVP1', 'Motivo sintético no definitorio'] }];
+  const relationalRows = [{ cells: ['Tema sintético del hallazgo', 'Motivo sintético', 'ADR-TST-001'] }];
+
+  check('25. ID candidato se infiere por contenido mayoritario y conserva ADR namespaced',
+    byId.get('ADR-TST-027')?.forma === 'tabla' &&
+    tablePolicy(['ID candidato', 'Título', 'Motivo', 'Relación funcional'], '', candidateRows).mode === 'explicit-schema');
+  check('26. ID inferido por contenido sin columna de título queda en compact-only',
+    !byId.has('RF-TST-MOD-101') &&
+    tablePolicy(['RF', 'Horizonte', 'Motivo'], '', horizonRows).mode === 'compact-only');
+  check('27. ID y Tema con Destino conserva la definición FUT como recuperación intencional',
+    byId.get('FUT-TST-005')?.forma === 'tabla' &&
+    tablePolicy(['ID', 'Tema', 'Motivo / Disparador', 'Destino'], '').mode === 'explicit-schema');
+  check('28. Columna relacional posterior con IDs no promueve la tabla a esquema explícito',
+    !byId.has('ADR-TST-001') &&
+    tablePolicy(['Tema', 'Motivo de diferimiento', 'ADR sugerido'], '', relationalRows).mode === 'compact-only');
+}
+
 try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
 
 const bar = '='.repeat(58);
 console.log(bar);
-console.log('  test_linter v0.5 — casos de ground-truth para MAD-Linter');
+console.log('  test_linter v0.6 — casos de ground-truth para MAD-Linter');
 console.log(bar);
 let pass = 0;
 for (const c of cases) { console.log(`  ${c.ok ? 'PASS' : 'FALL'}  ${c.name}`); if (c.ok) pass++; }
