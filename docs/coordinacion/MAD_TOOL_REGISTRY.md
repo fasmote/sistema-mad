@@ -40,11 +40,13 @@ Nunca vive con vida propia en los dos repositorios a la vez.
 
 | Herramienta | Versión | Estado | Qué hace | Mantiene |
 |---|---|---|---|---|
-| `mad-linter.cjs` | v0.4 | genérica-estable | Coherencia documental: referencias rotas, IDs duplicados y títulos fabricados [H] | Claude + Claudio |
-| `test_linter.cjs` | v0.4 | genérica-estable | Pruebas del linter (10 casos) | Claude + Claudio |
+| `mad-definition-extractor.cjs` | v0.1 | genérica-estable | Extrae definiciones formales de encabezados y tablas; excluye equivalencias, derivaciones, estados y catálogos mediante sección o esquema de columnas | Claude + ChatGPT + Claudio + SOS |
+| `mad-title-policy.cjs` | v0.1 | genérica-estable | Política versionada y compartida de normalización, similitud Jaccard, divergencia y agrupación de títulos | Claude + ChatGPT + Claudio + SOS |
+| `mad-linter.cjs` | v0.5 | genérica-estable | Coherencia documental; [H] usa el extractor común, cubre tablas/FUT-NNN/B/J y ofrece modos `audit` y `error` | Claude + ChatGPT + Claudio + SOS |
+| `test_linter.cjs` | v0.5 | genérica-estable | Suite sintética del linter, extractor, política e índice (16 casos; sin corpus cliente) | Claude + ChatGPT + Claudio + SOS |
 | `mad-snapshot.cjs` | v0.1 | genérica-estable | Censo de artefactos con sello temporal y detección de pérdidas | Claude + Claudio |
 | `mad-diff.cjs` | v0.1 | genérica-estable | Compara contenido de artefactos entre versiones | Claude + Claudio |
-| `mad-index.cjs` | v0.06 | genérica-estable, unificada con SOS | Índice persistente con 9.ª regla, IDs compuestos y namespace GAP | Claude + Claudio + SOS |
+| `mad-index.cjs` | v0.07 | genérica-estable; adopción SOS pendiente | Índice persistente con JSON aditivo: conserva escalares y expone ocurrencias, variantes, orígenes y colisiones no resueltas | Claude + ChatGPT + Claudio + SOS |
 | `mad-pack.cjs` | v0.2 | genérica-estable | Arma paquetes mínimos de contexto para IA; valida visibilidad, tamaño, rutas, configuración y privacidad | Claude + ChatGPT + Claudio |
 | `test_pack.cjs` | v0.2 | genérica-estable | Suite de ground truth de `mad-pack` (41 casos) | Claude + ChatGPT + Claudio |
 | `mad-release-gate.cjs` | v0.2 | genérica-estable | Puerta determinística de publicación: corpus, commit, hashes y bytes | Claude + Claudio + SOS |
@@ -92,6 +94,22 @@ en el repo SOS mediante un cambio independiente y no mezclarse con el PR H4.
 
 ---
 
+## Política compartida de títulos y definiciones
+
+`mad-index` y el control `[H]` de `mad-linter` consumen el mismo extractor y la
+misma política versionada. La política v1 usa Jaccard por conjunto de palabras,
+umbral de divergencia `0.45`, agrupación visual `0.85` y normalización
+`lowercase-no-diacritics-no-punctuation`.
+
+Las tablas de equivalencia, derivación, estado y catálogo no se consideran
+definiciones cuando lo indica el encabezado de sección. Fuera de esas secciones,
+un esquema con columnas de ID y título/definición cuenta como definición; si no
+hay columna de título y aparecen columnas relacionales, de estado o catálogo, se
+excluye. El formato compacto `ID — Título` define sólo fuera de las secciones
+excluidas.
+Las colisiones se publican como no resueltas: ninguna variante se vuelve canónica
+por acción del toolchain.
+
 ## Divergencia `mad-index` — resuelta
 
 Las copias históricas de:
@@ -99,10 +117,10 @@ Las copias históricas de:
 - `sistema-mad/tools/mad-index.cjs`
 - `his-core-platform-sos/tools/mad-index.cjs`
 
-fueron verificadas como idénticas. La versión v0.06 incluye la **9.ª regla**,
+fueron verificadas como idénticas. La versión v0.07 conserva la **9.ª regla**,
 que clasifica IDs solo citados como `RESERVADO`, `NO-EMITIDO`, `ABSORBIDO` o
-`RENUMERADO`, además de soportar namespace `GAP`, IDs compuestos, definiciones
-en tablas y placeholders `-000`.
+`RENUMERADO`, y agrega el extractor y la política compartidos para no perder
+títulos divergentes ni sus documentos de origen.
 
 No queda una decisión pendiente sobre `mad-index`.
 
