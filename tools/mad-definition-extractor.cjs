@@ -6,7 +6,7 @@ const ARTIFACT_PATTERNS = Object.freeze([
   { tipo: 'rf',  re: /^RF-[A-Z]{2,7}-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}(?![A-Z0-9-])/ },
   { tipo: 'da',  re: /^(?:DA-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|DA-\d{2,3})(?![A-Z0-9-])/ },
   { tipo: 'ph',  re: /^PH-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}(?![A-Z0-9-])/ },
-  { tipo: 'adr', re: /^ADR-\d{2,3}(?![A-Z0-9-])/ },
+  { tipo: 'adr', re: /^(?:ADR-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|ADR-\d{2,3})(?![A-Z0-9-])/ },
   { tipo: 'fut', re: /^(?:FUT-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}|FUT-\d{3})(?![A-Z0-9-])/ },
   { tipo: 'gap', re: /^GAP-[A-Z]{2,7}(?:-[A-Z]{2,7})?-\d{3}(?![A-Z0-9-])/ },
 ]);
@@ -14,19 +14,19 @@ const ARTIFACT_PATTERNS = Object.freeze([
 const HEADING_RE = /^\s*(#{1,6})\s+(.*\S)\s*$/;
 const TABLE_SEPARATOR_CELL_RE = /^:?-{3,}:?$/;
 const NON_DEFINITION_SECTION_RE = /\b(?:equivalencias?|derivaciones?|estados?|cat[aá]logos?)\b/i;
-const ID_HEADER_RE = /^(?:id|identificador|c[oó]digo)(?:\s+del?\s+artefacto)?$/i;
-const TITLE_HEADER_RE = /^(?:t[ií]tulo|nombre|pregunta|descripci[oó]n|decisi[oó]n|requisito|definici[oó]n)$/i;
+const ID_HEADER_RE = /^(?:(?:id|identificador|c[oó]digo)(?:\s+del?\s+artefacto)?|rf|da|ph|adr|fut|gap|id\s+(?:futuro|sugerido))$/i;
+const TITLE_HEADER_RE = /^(?:t[ií]tulo|nombre|pregunta|descripci[oó]n|decisi[oó]n|requisito|definici[oó]n|tema|enunciado)$/i;
 const NON_DEFINITION_COLUMN_RE = /^(?:id\s+origen|id\s+destino|origen|destino|equivalente\s+a|equivalencia|deriva\s+de|derivaci[oó]n|estado|categor[ií]a|cat[aá]logo)$/i;
 const DECLARED_VERSION_RE = /Versi[oó]n\s*[|:]\s*v?(\d+)[._](\d+)/i;
 const FILE_VERSION_RE = /v(\d+)[._](\d+)/i;
 
 /*
  * Política explícita para filas de tabla:
- * - una sección de equivalencias, derivaciones, estados o catálogo nunca define;
- * - un esquema con columna ID y columna de título/definición sí define;
- * - sin columna de título, las columnas relacionales, de estado o catálogo excluyen;
- * - el formato compacto "ID — Título" sigue siendo una definición explícita salvo
- *   que esté dentro de una de las secciones excluidas.
+ * - none: una sección o un esquema relacional/de estado/de catálogo no define;
+ * - explicit-schema: columna ID reconocida por encabezado o contenido mayoritario
+ *   y columna de título reconocida, con extracción posicional;
+ * - compact-only: esquema parcial o desconocido; sólo acepta "ID — Título";
+ * - legacy-row: tabla sin encabezado, con compatibilidad posicional histórica.
  */
 
 function stripCode(text) {
@@ -58,6 +58,25 @@ function titleAfterId(text, id) {
   return text.slice(position + id.length).replace(/^[\s`—–\-:.]+/, '').replace(/`$/, '').trim();
 }
 
+function isRangeHeadingRemainder(remainder, firstArtifact) {
+  const afterA = String(remainder || '').match(/^a\s+(.+)$/i);
+  if (!afterA) return false;
+
+  const candidate = afterA[1];
+  const secondArtifact = artifactAtStart(candidate);
+  if (secondArtifact) {
+    const sameFamily = firstArtifact.id.replace(/\d{2,3}$/, '') ===
+      secondArtifact.id.replace(/\d{2,3}$/, '');
+    const tail = candidate.slice(secondArtifact.id.length);
+    return sameFamily && /^\s*(?:—|–|-|:|$)/.test(tail);
+  }
+
+  const finalNumber = candidate.match(/^(\d{2,3})(?!\d)/);
+  if (!finalNumber) return false;
+  const tail = candidate.slice(finalNumber[1].length);
+  return /^\s*(?:—|–|-|:|$)/.test(tail);
+}
+
 function documentVersion(file, text) {
   const declared = text.split(/\r?\n/).slice(0, 30).join('\n').match(DECLARED_VERSION_RE);
   if (declared) return `v${declared[1]}.${declared[2]}`;
@@ -65,20 +84,35 @@ function documentVersion(file, text) {
   return named ? `v${named[1]}.${named[2]}` : null;
 }
 
-function tablePolicy(header, sectionHeading) {
-  if (NON_DEFINITION_SECTION_RE.test(sectionHeading || '')) {
-    return { definition: false, reason: 'non-definition-section' };
-  }
-  if (!header || !header.length) return { definition: true, idColumn: 0, titleColumn: 1, reason: 'legacy-row' };
+function idColumnFromContent(rows) {
+  const cells = rows
+    .map(row => row && row.cells ? row.cells[0] : '')
+    .filter(cell => String(cell || '').trim().length > 0);
+  if (!cells.length) return -1;
 
-  const idColumn = header.findIndex(cell => ID_HEADER_RE.test(cell));
+  const matches = cells.filter(cell => artifactAtStart(cell)).length;
+  return matches * 2 > cells.length ? 0 : -1;
+}
+
+function tablePolicy(header, sectionHeading, dataRows = []) {
+  if (NON_DEFINITION_SECTION_RE.test(sectionHeading || '')) {
+    return { mode: 'none', reason: 'non-definition-section' };
+  }
+  if (!header || !header.length) {
+    return { mode: 'legacy-row', idColumn: 0, titleColumn: 1, reason: 'headerless-table' };
+  }
+
+  const headerIdColumn = header.findIndex(cell => ID_HEADER_RE.test(cell));
+  const contentIdColumn = idColumnFromContent(dataRows);
+  const idColumn = headerIdColumn >= 0 ? headerIdColumn : contentIdColumn;
   const titleColumn = header.findIndex(cell => TITLE_HEADER_RE.test(cell));
   const hasNonDefinitionColumns = header.some(cell => NON_DEFINITION_COLUMN_RE.test(cell));
   if (idColumn >= 0 && titleColumn >= 0) {
-    return { definition: true, idColumn, titleColumn, reason: 'explicit-schema' };
+    const idSource = headerIdColumn >= 0 ? 'header' : 'content-majority';
+    return { mode: 'explicit-schema', idColumn, titleColumn, reason: `${idSource}-id-and-title` };
   }
-  if (hasNonDefinitionColumns) return { definition: false, reason: 'non-definition-columns' };
-  return { definition: true, idColumn: 0, titleColumn: 1, reason: 'legacy-row' };
+  if (hasNonDefinitionColumns) return { mode: 'none', reason: 'non-definition-columns' };
+  return { mode: 'compact-only', reason: 'partial-or-unrecognized-schema' };
 }
 
 function definitionRecord(tipo, id, title, file, version, form, line) {
@@ -111,7 +145,7 @@ function extractDefinitionsFromText(file, rawText) {
       const artifact = artifactAtStart(headingText);
       if (artifact) {
         const title = titleAfterId(headingText, artifact.id);
-        if (title.length >= 4) definitions.push(definitionRecord(
+        if (title.length >= 4 && !isRangeHeadingRemainder(title, artifact)) definitions.push(definitionRecord(
           artifact.tipo, artifact.id, title, file, version, 'encabezado', i + 1));
       }
       continue;
@@ -128,11 +162,13 @@ function extractDefinitionsFromText(file, rawText) {
     const separator = block.findIndex(row => row.cells && row.cells.length &&
       row.cells.every(cell => TABLE_SEPARATOR_CELL_RE.test(cell)));
     const header = separator > 0 ? block[separator - 1].cells : null;
-    const policy = tablePolicy(header, sectionStack.filter(Boolean).join(' / '));
-    if (!policy.definition) continue;
-
     const dataStart = separator >= 0 ? separator + 1 : 0;
-    for (const row of block.slice(dataStart)) {
+    const dataRows = block.slice(dataStart);
+    const nearestSection = sectionStack.filter(Boolean).slice(-1)[0] || '';
+    const policy = tablePolicy(header, nearestSection, dataRows);
+    if (policy.mode === 'none') continue;
+
+    for (const row of dataRows) {
       if (!row.cells || row.cells.length < 2) continue;
 
       const compact = artifactAtStart(row.cells[0]);
@@ -142,6 +178,8 @@ function extractDefinitionsFromText(file, rawText) {
           compact.tipo, compact.id, compactTitle, file, version, 'tabla-compacta', row.line));
         continue;
       }
+
+      if (policy.mode === 'compact-only') continue;
 
       const idCell = row.cells[policy.idColumn ?? 0] || '';
       const artifact = artifactAtStart(idCell);
