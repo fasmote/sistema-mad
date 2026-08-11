@@ -469,11 +469,42 @@ const contentIdFixture = tmp('MAD_Fixture_v9_99_TST_ColumnaIdPorContenido.md',
     tablePolicy(['Tema', 'Motivo de diferimiento', 'ADR sugerido'], '', relationalRows).mode === 'compact-only');
 }
 
+// 29-30. Las tablas de consumo sólo citan; una tabla explícita continúa definiendo.
+const consumptionFixture = tmp('MAD_Fixture_v9_99_TST_ConsumoCore.md',
+`# Consumo sintético del Core
+| Versión | v9.99 |
+
+## RF del Core consumidos
+| RF consumido | Qué consume | Qué no redefine |
+|---|---|---|
+| \`RF-TST-DOC-001 — Título sintético consumido\` y \`RF-TST-DOC-002 — Otro título sintético consumido\` | Datos sintéticos | Modelo sintético |
+| \`RF-TST-DOC-003 — Cita sintética individual\` | Estado sintético | Regla sintética |
+
+## Definiciones reales
+| ID | Título |
+|---|---|
+| RF-TST-DOC-004 | Definición sintética real de control |
+`);
+
+{
+  const definitions = extractDefinitions(new Map([
+    [consumptionFixture, fs.readFileSync(consumptionFixture, 'utf8')],
+  ]));
+  const byId = new Map(definitions.map(definition => [definition.id, definition]));
+  check('29. Tabla RF consumido extrae cero definiciones, incluidas citas múltiples y simples',
+    !['RF-TST-DOC-001', 'RF-TST-DOC-002', 'RF-TST-DOC-003'].some(id => byId.has(id)) &&
+    ['RF consumido', 'RF del Core consumidos', 'Consumido', 'Consume del Core', 'Qué consume', 'Referencia']
+      .every(header => tablePolicy([header, 'Nota'], '').mode === 'none'));
+  check('30. Tabla explícita ID/Título continúa extrayendo una definición real',
+    byId.get('RF-TST-DOC-004')?.forma === 'tabla' &&
+    tablePolicy(['ID', 'Título'], '').mode === 'explicit-schema');
+}
+
 try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
 
 const bar = '='.repeat(58);
 console.log(bar);
-console.log('  test_linter v0.6 — casos de ground-truth para MAD-Linter');
+console.log('  test_linter v0.7 — casos de ground-truth para MAD-Linter');
 console.log(bar);
 let pass = 0;
 for (const c of cases) { console.log(`  ${c.ok ? 'PASS' : 'FALL'}  ${c.name}`); if (c.ok) pass++; }

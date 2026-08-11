@@ -17,6 +17,7 @@ const NON_DEFINITION_SECTION_RE = /\b(?:equivalencias?|derivaciones?|estados?|ca
 const ID_HEADER_RE = /^(?:(?:id|identificador|c[oó]digo)(?:\s+del?\s+artefacto)?|rf|da|ph|adr|fut|gap|id\s+(?:futuro|sugerido))$/i;
 const TITLE_HEADER_RE = /^(?:t[ií]tulo|nombre|pregunta|descripci[oó]n|decisi[oó]n|requisito|definici[oó]n|tema|enunciado)$/i;
 const NON_DEFINITION_COLUMN_RE = /^(?:id\s+origen|id\s+destino|origen|destino|equivalente\s+a|equivalencia|deriva\s+de|derivaci[oó]n|estado|categor[ií]a|cat[aá]logo)$/i;
+const NON_DEFINITION_COMPACT_COLUMN_RE = /^(?:(?:rf(?:\s+(?:del?|de\s+la)\s+core)?\s+)?consumid[oa]s?|(?:qu[eé]\s+)?consume(?:\s+(?:del?|de\s+la)\s+core)?|referencias?(?:\s+(?:(?:al?|del?|de\s+la)\s+core))?)$/i;
 const DECLARED_VERSION_RE = /Versi[oó]n\s*[|:]\s*v?(\d+)[._](\d+)/i;
 const FILE_VERSION_RE = /v(\d+)[._](\d+)/i;
 
@@ -26,6 +27,7 @@ const FILE_VERSION_RE = /v(\d+)[._](\d+)/i;
  * - explicit-schema: columna ID reconocida por encabezado o contenido mayoritario
  *   y columna de título reconocida, con extracción posicional;
  * - compact-only: esquema parcial o desconocido; sólo acepta "ID — Título";
+ * - una primera columna que declara consumo o referencia sólo cita artefactos;
  * - legacy-row: tabla sin encabezado, con compatibilidad posicional histórica.
  */
 
@@ -100,6 +102,9 @@ function tablePolicy(header, sectionHeading, dataRows = []) {
   }
   if (!header || !header.length) {
     return { mode: 'legacy-row', idColumn: 0, titleColumn: 1, reason: 'headerless-table' };
+  }
+  if (NON_DEFINITION_COMPACT_COLUMN_RE.test(header[0] || '')) {
+    return { mode: 'none', reason: 'non-definition-compact-column' };
   }
 
   const headerIdColumn = header.findIndex(cell => ID_HEADER_RE.test(cell));
@@ -204,6 +209,7 @@ module.exports = {
   ARTIFACT_PATTERNS,
   NON_DEFINITION_SECTION_RE,
   NON_DEFINITION_COLUMN_RE,
+  NON_DEFINITION_COMPACT_COLUMN_RE,
   stripCode,
   artifactAtStart,
   tablePolicy,
