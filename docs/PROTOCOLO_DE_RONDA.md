@@ -97,6 +97,47 @@ INICIO DE RONDA
 
 ---
 
+## Reglas de autorización y trazabilidad
+
+### IDs canónicos de decisión citados verbatim
+
+1. Cada decisión recibe un D-ID al registrarse en la lista canónica de decisiones de la ronda.
+2. Toda auditoría, síntesis, plan u otro documento derivado cita el D-ID y su texto canónico verbatim, sin reenumerarlo ni reorganizarlo como una decisión local.
+3. Antes de ratificar una síntesis, se audita la fidelidad de sus D-IDs y textos contra la lista canónica.
+4. Los ítems que no son decisiones D —por ejemplo, decisiones de método o hallazgos funcionales— se registran en su propia serie y nunca alteran la numeración D.
+
+Los IDs de decisión son hechos con dueño único. Los documentos derivados los referencian; no crean copias libres de su contenido.
+
+### Analizar antes de ejecutar en cambios con criterio
+
+Un pedido de análisis, evaluación, auditoría o propuesta no autoriza a modificar artefactos ni repositorios. El Orquestador debe:
+
+1. analizar el problema;
+2. presentar hallazgos, impacto y propuesta;
+3. esperar la decisión explícita del árbitro humano;
+4. ejecutar solamente después de recibir autorización.
+
+Que una corrección parezca evidente, conveniente o necesaria no convierte el análisis en permiso de ejecución.
+
+### Separación entre proponer y ejecutar
+
+Cuando el árbitro humano autoriza un cambio acotado, la entrega debe contener exclusivamente ese cambio.
+
+Si durante el trabajo se detecta otra mejora, error, inconsistencia, limpieza, eliminación o mudanza:
+
+1. se aplica solamente el alcance autorizado;
+2. el resto se lista bajo el encabezado exacto **“CAMBIOS ADICIONALES PROPUESTOS (no aplicados)”**;
+3. cada propuesta indica qué cambiar, dónde, por qué y qué sucede si no se realiza;
+4. se espera autorización humana explícita para cada cambio adicional.
+
+La calidad aparente de un cambio no lo autoriza. Incorporar cambios extra rompe la trazabilidad, amplía el diff y obliga a reauditar el conjunto.
+
+#### Regla espejo para lecciones MAD
+
+Ninguna lección, aprendizaje o regla metodológica MAD puede eliminarse, moverse o dejar de registrarse sin ratificación humana explícita. Si una lección está en una ubicación inadecuada, se propone su traslado a la fuente canónica y se confirma su registro allí antes de retirarla de la ubicación anterior.
+
+---
+
 ## Problema de distribución de archivos (limitación conocida)
 
 Las IAs chinas (DeepSeek, Qwen, MiniMax) aceptan máximo 5 archivos y no aceptan ZIP.
