@@ -185,6 +185,9 @@ El glosario de ChatGPT, los 11 artefactos de MiniMax, el código de Qwen — nin
 5. **Compilá el contexto en un solo documento** — para superar limitaciones de plataformas
 6. **El criterio de cierre es rendimiento decreciente, no N rondas**
 7. **Separá los objetos de estado** — Debate Log (auditoría) ≠ Log técnico (operacional)
+8. **Usá IDs canónicos de decisión citados verbatim** — cada decisión tiene un único D-ID y texto canónico; auditorías, síntesis y planes los referencian sin reenumerarlos. Antes de ratificar, se compara cada derivado contra la lista canónica. Método y hallazgos usan series separadas.
+9. **Analizá antes de ejecutar cambios que requieren criterio** — pedir análisis, auditoría o recomendación no autoriza modificar. Primero se presentan hallazgos, impacto y propuesta; el árbitro humano decide; recién después se ejecuta.
+10. **Separá proponer de ejecutar** — un cambio acotado autoriza exclusivamente ese alcance. Todo hallazgo adicional se informa como **“CAMBIOS ADICIONALES PROPUESTOS (no aplicados)”**, con qué, dónde, por qué y consecuencia de no hacerlo. Nada se elimina o mueve sin autorización; las lecciones MAD sólo pueden trasladarse después de confirmar su registro canónico.
 
 ---
 
