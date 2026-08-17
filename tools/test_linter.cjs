@@ -499,6 +499,7 @@ const consumptionFixture = tmp('MAD_Fixture_v9_99_TST_ConsumoCore.md',
     byId.get('RF-TST-DOC-004')?.forma === 'tabla' &&
     tablePolicy(['ID', 'Título'], '').mode === 'explicit-schema');
 }
+check('31. RED-TEST DELIBERADO — NO FUSIONAR (prueba de rojo de mad-ci-verify)', false);
 
 try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
 
