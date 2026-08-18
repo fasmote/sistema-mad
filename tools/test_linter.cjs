@@ -500,6 +500,7 @@ const consumptionFixture = tmp('MAD_Fixture_v9_99_TST_ConsumoCore.md',
     tablePolicy(['ID', 'Título'], '').mode === 'explicit-schema');
 }
 
+check('31. BLOCK-TEST DELIBERADO — NO FUSIONAR (prueba de bloqueo de mad-ci-verify)', false);
 try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
 
 const bar = '='.repeat(58);
